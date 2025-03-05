@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  art-service:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      ART_DB_URL: "postgres://myuser:pass@db:5432/art"
+    depends_on:
+      - db
+    networks:
+      - apollo-net
+
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: art
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - apollo-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: adminpass
+    command: start-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+
+    networks:
+      - apollo-net
+
+networks:
+  apollo-net:
+    driver: bridge
+
+volumes:
+  db-data:
+  keycloak-data:

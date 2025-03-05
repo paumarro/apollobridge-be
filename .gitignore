@@ -1,0 +1,7 @@
+settings.json
+*.env
+*.exe
+*.dll
+*.so
+*.dylib
+*.out
