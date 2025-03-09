@@ -3,20 +3,38 @@ package main
 import (
 	"log"
 
-	"github.com/paumarro/apollo-be/internal/config"
-	"github.com/paumarro/apollo-be/internal/server"
+	"github.com/gin-gonic/gin"
+	"github.com/paumarro/apollo-be/internal/controllers"
+	"github.com/paumarro/apollo-be/internal/initializers"
+	"github.com/paumarro/apollo-be/internal/middleware"
+	"github.com/paumarro/apollo-be/internal/models"
+	env "github.com/paumarro/apollo-be/pkg"
 )
 
-func main() {
-	// Load configuration
-	cfg, err := config.LoadFromEnv()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+func init() {
+	env.LoadEnvVariables()
+	initializers.ConnectToDB()
+	if err := initializers.DB.AutoMigrate(&models.Artwork{}); err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
 	}
+}
 
-	// Create and start server
-	srv := server.NewServer(cfg)
-	if err := srv.Start(); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
+func main() {
+	r := gin.Default()
+
+	// Apply the AuthMiddleware to all routes in the group
+	secured := r.Group("/")
+	secured.Use(middleware.AuthMiddleware())
+
+	// Protected routes
+	secured.POST("/artworks", controllers.ArtworkCreate)
+	secured.GET("/artworks", controllers.ArtworkIndex)
+	secured.GET("/artworks/:id", controllers.ArtworkFind)
+	secured.PUT("/artworks/:id", controllers.ArtworkUpdate)
+	secured.DELETE("/artworks/:id", controllers.ArtworkDelete)
+
+	r.GET("/auth/callback", controllers.AuthCallback)
+
+	// Run the server
+	r.Run()
 }

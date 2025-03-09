@@ -4,8 +4,8 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	initializers "github.com/paumarro/apollo-be/internal/art-service/initializers"
-	"github.com/paumarro/apollo-be/internal/art-service/models"
+	initializers "github.com/paumarro/apollo-be/internal/initializers"
+	"github.com/paumarro/apollo-be/internal/models"
 )
 
 var body struct {

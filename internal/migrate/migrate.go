@@ -1,8 +1,8 @@
 package main
 
 import (
-	initializers "github.com/paumarro/apollo-be/internal/art-service/initializers"
-	"github.com/paumarro/apollo-be/internal/art-service/models"
+	initializers "github.com/paumarro/apollo-be/internal/initializers"
+	"github.com/paumarro/apollo-be/internal/models"
 	env "github.com/paumarro/apollo-be/pkg"
 )
 

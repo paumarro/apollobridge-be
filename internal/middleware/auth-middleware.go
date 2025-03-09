@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -11,14 +12,23 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
-var loginPageUrl = "http://localhost:8080/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=apollo-client&redirect_uri=http://localhost:3000/artworks&scope=openid"
+var loginPageUrl = "http://localhost:8080/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=apollo-client&redirect_uri=http://localhost:3000/auth/callback&scope=openid"
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
+
+		// If Authorization header is missing, try to set it from the cookie
 		if authHeader == "" {
-			redirectToLogin(c)
-			return
+			accessToken, err := c.Cookie("access_token")
+			if err != nil {
+				// Capture the original URL
+				originalURL := c.Request.URL.String()
+				redirectToLogin(c, originalURL)
+				return
+			}
+			authHeader = "Bearer " + accessToken
+			c.Request.Header.Set("Authorization", authHeader)
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
@@ -36,7 +46,8 @@ func AuthMiddleware() gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			redirectToLogin(c)
+			originalURL := c.Request.URL.String()
+			redirectToLogin(c, originalURL)
 			return
 		}
 
@@ -45,8 +56,14 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
+func redirectToLogin(c *gin.Context, originalURL string) {
+	loginURL := fmt.Sprintf("%s&state=%s", loginPageUrl, url.QueryEscape(originalURL))
+	c.Redirect(http.StatusFound, loginURL)
+	c.Abort()
+}
+
 func getKeycloakPublicKey() (interface{}, error) {
-	jwksURL := "http://localhost:8080/auth/realms/apollo/protocol/openid-connect/certs"
+	jwksURL := "http://keycloak:8080/realms/apollo/protocol/openid-connect/certs"
 	set, err := jwk.Fetch(context.Background(), jwksURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWK set: %v", err)
@@ -63,9 +80,4 @@ func getKeycloakPublicKey() (interface{}, error) {
 	}
 
 	return pubKey, nil
-}
-
-func redirectToLogin(c *gin.Context) {
-	c.Redirect(http.StatusFound, loginPageUrl)
-	c.Abort()
 }

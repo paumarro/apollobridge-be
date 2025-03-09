@@ -10,14 +10,14 @@ COPY go.sum .
 
 RUN go mod download
 
-COPY ./cmd/art-service ./cmd/art-service
-COPY ./internal/art-service ./internal/art-service
+COPY ./cmd ./cmd
+COPY ./internal ./internal
 COPY pkg ./pkg
 COPY .env .
 
 
 # Change to the service directory and build the application
-RUN go build -o art-service ./cmd/art-service
+RUN go build -o art-service ./cmd
 
 # Command to run the application
 CMD ["./art-service"]

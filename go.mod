@@ -62,6 +62,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/joho/godotenv v1.5.1
 	github.com/lestrrat-go/jwx v1.2.30
+	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/text v0.16.0 // indirect
 	gorm.io/driver/postgres v1.5.11
 )
