@@ -14,7 +14,7 @@ import (
 
 var loginPageUrl = "http://localhost:8080/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=apollo-client&redirect_uri=http://localhost:3000/auth/callback&scope=openid"
 
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
@@ -51,9 +51,44 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		if !hasRole(token, requiredRole, clientID) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+			return
+		}
+
 		// Token is valid, proceed with the request
 		c.Next()
 	}
+}
+
+func hasRole(token *jwt.Token, requiredRole string, clientID string) bool {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		fmt.Println("Failed to parse claims")
+		return false
+	}
+
+	resourceAccess, ok := claims["resource_access"].(map[string]interface{})
+	if !ok {
+		fmt.Println("Failed to extract resource_access")
+		return false
+	}
+
+	clientRoles, ok := resourceAccess[clientID].(map[string]interface{})["roles"].([]interface{})
+	if !ok {
+		fmt.Println("Failed to extract client roles")
+		return false
+	}
+
+	fmt.Println("Client roles found:", clientRoles)
+
+	for _, role := range clientRoles {
+		if role == requiredRole {
+			fmt.Printf("User has client role %s\n", requiredRole)
+			return true
+		}
+	}
+	return false
 }
 
 func redirectToLogin(c *gin.Context, originalURL string) {
