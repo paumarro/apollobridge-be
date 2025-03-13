@@ -12,4 +12,5 @@ type Artwork struct {
 	Artist      string
 	Date        *time.Time
 	Description string
+	Image       string
 }

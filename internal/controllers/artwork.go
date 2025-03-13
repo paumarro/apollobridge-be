@@ -12,6 +12,7 @@ var body struct {
 	Title       string
 	Artist      string
 	Description string
+	Image       string
 }
 
 func ArtworkCreate(c *gin.Context) {
@@ -74,6 +75,7 @@ func ArtworkUpdate(c *gin.Context) {
 		Title:       body.Title,
 		Artist:      body.Artist,
 		Description: body.Description,
+		Image:       body.Image,
 	})
 
 	c.JSON(200, gin.H{
