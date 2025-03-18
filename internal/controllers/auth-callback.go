@@ -21,12 +21,13 @@ func AuthCallback(c *gin.Context) {
 	originalURL := c.Query("state")
 
 	kcClientSecret := os.Getenv("KEYCLOAK_CLIENT_SECRET")
+	kcClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
 	tokenURL := "http://keycloak:8080/realms/apollo/protocol/openid-connect/token"
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
 	data.Set("redirect_uri", "http://localhost:3000/auth/callback")
-	data.Set("client_id", "apollo-client")
+	data.Set("client_id", kcClientID)
 	data.Set("client_secret", kcClientSecret)
 
 	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))

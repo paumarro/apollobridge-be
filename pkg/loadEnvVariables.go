@@ -2,16 +2,24 @@ package env
 
 import (
 	"log"
-
-	"github.com/joho/godotenv"
+	"os"
 )
 
 func LoadEnvVariables() {
-	err := godotenv.Load()
+	// Access environment variables
+	port := os.Getenv("PORT")
+	artDbURL := os.Getenv("ART_DB_URL")
+	keycloakURL := os.Getenv("KEYCLOAK_URL")
+	// keycloakRealm := os.Getenv("KEYCLOAK_REALM")
+	// keycloakClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
+	// keycloakClientSecret := os.Getenv("KEYCLOAK_CLIENT_SECRET")
+	// redirectURL := os.Getenv("REDIRECT_URL")
 
-	if err != nil {
-		log.Fatalf("Error loading .env file")
+	// Example of error handling for critical variables
+	if port == "" || artDbURL == "" || keycloakURL == "" {
+		log.Fatalf("Error: Critical environment variables are not set")
 	}
 
+	// Log the successful loading of environment variables
 	log.Println("Environment variables loaded successfully!")
 }
