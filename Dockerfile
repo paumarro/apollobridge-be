@@ -13,7 +13,7 @@ RUN go mod download
 COPY ./cmd ./cmd
 COPY ./internal ./internal
 COPY pkg ./pkg
-COPY .env .
+# COPY .env .
 
 
 # Change to the service directory and build the application
