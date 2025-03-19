@@ -6,14 +6,14 @@ import (
 )
 
 func LoadEnvVariables() {
-	// Access environment variables
+	// Access and log environment variables
 	port := os.Getenv("PORT")
-	artDbURL := os.Getenv("PG_DB_URL")
+	artDbURL := os.Getenv("ART_DB_URL")
 	keycloakURL := os.Getenv("KEYCLOAK_URL")
-	// keycloakRealm := os.Getenv("KEYCLOAK_REALM")
-	// keycloakClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
-	// keycloakClientSecret := os.Getenv("KEYCLOAK_CLIENT_SECRET")
-	// redirectURL := os.Getenv("REDIRECT_URL")
+
+	log.Printf("PORT: %s", port)
+	log.Printf("ART_DB_URL: %s", artDbURL)
+	log.Printf("KEYCLOAK_URL: %s", keycloakURL)
 
 	// Example of error handling for critical variables
 	if port == "" || artDbURL == "" || keycloakURL == "" {
