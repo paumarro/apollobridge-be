@@ -8,7 +8,7 @@ import (
 func LoadEnvVariables() {
 	// Access environment variables
 	port := os.Getenv("PORT")
-	artDbURL := os.Getenv("ART_DB_URL")
+	artDbURL := os.Getenv("PG_DB_URL")
 	keycloakURL := os.Getenv("KEYCLOAK_URL")
 	// keycloakRealm := os.Getenv("KEYCLOAK_REALM")
 	// keycloakClientID := os.Getenv("KEYCLOAK_CLIENT_ID")

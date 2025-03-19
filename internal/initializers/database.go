@@ -12,7 +12,7 @@ var DB *gorm.DB
 
 func ConnectToDB() {
 	// Retrieve the DSN (Data Source Name) from the environment variable
-	dsn := os.Getenv("ART_DB_URL")
+	dsn := os.Getenv("PG_DB_URL")
 	log.Println(dsn)
 
 	// Attempt to establish the connection to the database
