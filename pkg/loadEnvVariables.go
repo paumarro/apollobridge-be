@@ -1,7 +1,6 @@
 package env
 
 import (
-	"fmt"
 	"log"
 	"os"
 )
@@ -10,13 +9,7 @@ func LoadEnvVariables() {
 	// Access and log environment variables
 	port := os.Getenv("PORT")
 	keycloakURL := os.Getenv("KEYCLOAK_URL")
-	artDbURL := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s",
-		os.Getenv("PGUSER"),
-		os.Getenv("POSTGRES_PASSWORD"),
-		os.Getenv("RAILWAY_TCP_PROXY_DOMAIN"),
-		os.Getenv("RAILWAY_TCP_PROXY_PORT"),
-		os.Getenv("PGDATABASE"),
-	)
+	artDbURL := os.Getenv("PG_DB_URL")
 
 	log.Printf("PORT: %s", port)
 	log.Printf("PG_DB_URL: %s", artDbURL)
