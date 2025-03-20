@@ -26,7 +26,7 @@ func AuthCallback(c *gin.Context) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
-	data.Set("redirect_uri", "http://localhost:3000/auth/callback")
+	data.Set("redirect_uri", "http://apollobridge-be.up.railway.app/auth/callback")
 	data.Set("client_id", kcClientID)
 	data.Set("client_secret", kcClientSecret)
 
@@ -71,7 +71,7 @@ func AuthCallback(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("access_token", accessToken, 3600, "/", "localhost", false, true)
+	c.SetCookie("access_token", accessToken, 3600, "/", "apollobridge-be.up.railway.app", false, true)
 
 	// Redirect to the original URL
 	if originalURL != "" {

@@ -12,7 +12,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
-var loginPageUrl = "http://localhost:8080/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=apollo-client&redirect_uri=http://localhost:3000/auth/callback&scope=openid"
+var loginPageUrl = "https://keycloak-apollo/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=apollo-client&redirect_uri=https://apollobridge-be.up.railway.app/auth/callback&scope=openid"
 
 func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 	return func(c *gin.Context) {
