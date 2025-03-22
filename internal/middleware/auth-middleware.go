@@ -12,7 +12,16 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
-var loginPageUrl = "https://keycloak-apollo/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=apollo-client&redirect_uri=https://apollobridge-be.up.railway.app/auth/callback&scope=openid"
+var (
+	keycloakDomain     = "keycloak-apollo.up.railway.app"
+	apollobridgeDomain = "apollobridge.up.railway.app"
+
+	loginPageUrl = fmt.Sprintf(
+		"https://%s/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=apollo-client&redirect_uri=https://%s/auth/callback&scope=openid",
+		keycloakDomain,
+		apollobridgeDomain,
+	)
+)
 
 func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 	return func(c *gin.Context) {
