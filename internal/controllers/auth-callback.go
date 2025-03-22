@@ -24,7 +24,7 @@ func AuthCallback(c *gin.Context) {
 	kcClientSecret := os.Getenv("KEYCLOAK_CLIENT_SECRET")
 	kcClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
 	kcDomain := os.Getenv("KEYCLOAK_DOMAIN")
-	apollobridgeDomain := os.Getenv("RAILWAY_TCP_PROXY_DOMAIN")
+	apollobridgeDomain := os.Getenv("APOLLO_DOMAIN")
 
 	tokenURL := fmt.Sprintf("https://%s/realms/apollo/protocol/openid-connect/token", kcDomain)
 	data := url.Values{}
