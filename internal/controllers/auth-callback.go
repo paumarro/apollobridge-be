@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -22,11 +23,14 @@ func AuthCallback(c *gin.Context) {
 
 	kcClientSecret := os.Getenv("KEYCLOAK_CLIENT_SECRET")
 	kcClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
-	tokenURL := "http://keycloak:8080/realms/apollo/protocol/openid-connect/token"
+	kcDomain := os.Getenv("KEYCLOAK_DOMAIN")
+	apollobridgeDomain := os.Getenv("RAILWAY_TCP_PROXY_DOMAIN")
+
+	tokenURL := fmt.Sprintf("https://%s/realms/apollo/protocol/openid-connect/token", kcDomain)
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
-	data.Set("redirect_uri", "http://apollobridge-be.up.railway.app/auth/callback")
+	data.Set("redirect_uri", fmt.Sprintf("https://%s/auth/callback", apollobridgeDomain))
 	data.Set("client_id", kcClientID)
 	data.Set("client_secret", kcClientSecret)
 
