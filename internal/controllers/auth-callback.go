@@ -75,7 +75,7 @@ func AuthCallback(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("access_token", accessToken, 3600, "/", "apollobridge-be.up.railway.app", false, true)
+	c.SetCookie("access_token", accessToken, 3600, "/", "apollobridge-be.up.railway.app", true, true)
 
 	// Redirect to the original URL
 	if originalURL != "" {
