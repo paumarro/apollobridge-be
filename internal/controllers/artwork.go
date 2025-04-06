@@ -34,6 +34,7 @@ func ArtworkCreate(c *gin.Context) {
 }
 
 func ArtworkIndex(c *gin.Context) {
+	log.Println("Authorization header received:", c.GetHeader("Authorization"))
 	var artworks []models.Artwork
 	result := initializers.DB.Find(&artworks)
 

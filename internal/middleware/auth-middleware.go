@@ -25,12 +25,6 @@ var (
 )
 
 func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
-	fmt.Println("kcDomain", kcDomain)
-	fmt.Println("apollobridgeDomain", apollobridgeDomain)
-	fmt.Println("jwksURL", jwksURL)
-	if kcDomain == "" || apollobridgeDomain == "" || jwksURL == "" {
-		fmt.Println("Environment variables not set")
-	}
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
@@ -38,13 +32,16 @@ func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 		if authHeader == "" {
 			accessToken, err := c.Cookie("access_token")
 			if err != nil {
-				// Capture the original URL
+				fmt.Println("Error fetching access_token cookie:", err)
 				originalURL := c.Request.URL.String()
 				redirectToLogin(c, originalURL)
 				return
 			}
+			fmt.Println("Access token fetched from cookie:", accessToken)
+
 			authHeader = "Bearer " + accessToken
 			c.Request.Header.Set("Authorization", authHeader)
+			fmt.Println("Authorization header set:", authHeader)
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
