@@ -25,6 +25,14 @@ func AuthCallback(c *gin.Context) {
 	kcClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
 	kcDomain := os.Getenv("KEYCLOAK_DOMAIN")
 	apollobridgeDomain := os.Getenv("APOLLO_DOMAIN")
+	fmt.Fprintln(os.Stderr, "kcDomain", kcDomain)
+	fmt.Fprintln(os.Stderr, "apollobridgeDomain", apollobridgeDomain)
+	fmt.Fprintln(os.Stderr, "kcClientID", kcClientID)
+	fmt.Fprintln(os.Stderr, "kcClientSecret", kcClientSecret)
+	if kcClientSecret == "" || kcClientID == "" || kcDomain == "" || apollobridgeDomain == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Environment variables not set"})
+		return
+	}
 
 	tokenURL := fmt.Sprintf("https://%s/realms/apollo/protocol/openid-connect/token", kcDomain)
 	data := url.Values{}

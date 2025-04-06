@@ -17,8 +17,7 @@ var (
 	kcDomain           = os.Getenv("KEYCLOAK_DOMAIN")
 	apollobridgeDomain = os.Getenv("APOLLO_DOMAIN")
 	jwksURL            = os.Getenv("JWKS_URL")
-
-	loginPageUrl = fmt.Sprintf(
+	loginPageUrl       = fmt.Sprintf(
 		"https://%s/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=apollo-client&redirect_uri=https://%s/auth/callback&scope=openid",
 		kcDomain,
 		apollobridgeDomain,
@@ -26,6 +25,12 @@ var (
 )
 
 func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
+	fmt.Println("kcDomain", kcDomain)
+	fmt.Println("apollobridgeDomain", apollobridgeDomain)
+	fmt.Println("jwksURL", jwksURL)
+	if kcDomain == "" || apollobridgeDomain == "" || jwksURL == "" {
+		fmt.Println("Environment variables not set")
+	}
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
