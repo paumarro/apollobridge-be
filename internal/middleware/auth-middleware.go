@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -13,12 +14,13 @@ import (
 )
 
 var (
-	keycloakDomain     = "keycloak-apollo.up.railway.app"
-	apollobridgeDomain = "apollobridge.up.railway.app"
+	kcDomain           = os.Getenv("KEYCLOAK_DOMAIN")
+	apollobridgeDomain = os.Getenv("APOLLO_DOMAIN")
+	jwksURL            = os.Getenv("JWKS_URL")
 
 	loginPageUrl = fmt.Sprintf(
 		"https://%s/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=apollo-client&redirect_uri=https://%s/auth/callback&scope=openid",
-		keycloakDomain,
+		kcDomain,
 		apollobridgeDomain,
 	)
 )
@@ -107,7 +109,6 @@ func redirectToLogin(c *gin.Context, originalURL string) {
 }
 
 func getKeycloakPublicKey() (interface{}, error) {
-	jwksURL := "http://keycloak:8080/realms/apollo/protocol/openid-connect/certs"
 	set, err := jwk.Fetch(context.Background(), jwksURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWK set: %v", err)
