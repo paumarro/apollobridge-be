@@ -76,6 +76,9 @@ func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 
 func hasRole(token *jwt.Token, requiredRole string, clientID string) bool {
 	claims, ok := token.Claims.(jwt.MapClaims)
+	if requiredRole == "" {
+		return true
+	}
 	if !ok {
 		fmt.Println("Failed to parse claims")
 		return false
