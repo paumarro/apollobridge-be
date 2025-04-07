@@ -57,12 +57,37 @@ func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 			return pubKey, nil
 		})
 
-		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate public key"})
-			// originalURL := c.Request.URL.String()
-			// redirectToLogin(c, originalURL)
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			// Ensure the signing method is RS256
+			if token.Method != jwt.SigningMethodRS256 {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+		
+			// Fetch the public key using the token's kid
+			return getKeycloakPublicKey(token)
+		})
+		
+		if err != nil {
+			fmt.Printf("Token parsing error: %v\n", err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
+		
+		if !token.Valid {
+			fmt.Println("Token is invalid")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			return
+		}
+		
+		// Debugging: Print token claims
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			fmt.Println("Failed to parse claims")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
+		fmt.Printf("Token claims: %+v\n", claims)
+		
 
 		if !hasRole(token, requiredRole, clientID) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
