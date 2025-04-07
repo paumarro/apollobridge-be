@@ -57,15 +57,15 @@ func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 			return pubKey, nil
 		})
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			// Ensure the signing method is RS256
-			if token.Method != jwt.SigningMethodRS256 {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
+		// token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// 	// Ensure the signing method is RS256
+		// 	if token.Method != jwt.SigningMethodRS256 {
+		// 		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		// 	}
 		
-			// Fetch the public key using the token's kid
-			return getKeycloakPublicKey(token)
-		})
+		// 	// Fetch the public key using the token's kid
+		// 	return getKeycloakPublicKey(token)
+		// })
 		
 		if err != nil {
 			fmt.Printf("Token parsing error: %v\n", err)
