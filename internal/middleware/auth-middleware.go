@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"io"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -58,11 +59,14 @@ func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			originalURL := c.Request.URL.String()
-			redirectToLogin(c, originalURL)
-			fmt.Println("Token:", token)
-			return
-		}
+				bodyBytes, _ := io.ReadAll(resp.Body)
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error":    "Failed to validate token",
+					"status":   resp.StatusCode,
+					"response": string(bodyBytes),
+				})
+				return
+			}
 
 		if !hasRole(token, requiredRole, clientID) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
@@ -76,9 +80,7 @@ func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 
 func hasRole(token *jwt.Token, requiredRole string, clientID string) bool {
 	claims, ok := token.Claims.(jwt.MapClaims)
-	if requiredRole == "" {
-		return true
-	}
+
 	if !ok {
 		fmt.Println("Failed to parse claims")
 		return false
