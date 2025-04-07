@@ -40,7 +40,7 @@ func main() {
 	})
 
 	regularGroup := r.Group("/")
-	regularGroup.Use(middleware.AuthMiddleware("Regular", clientID))
+	regularGroup.Use(middleware.AuthMiddleware("", clientID))
 	regularGroup.GET("/artworks", controllers.ArtworkIndex)
 	regularGroup.GET("/artworks/:id", controllers.ArtworkFind)
 

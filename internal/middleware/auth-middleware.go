@@ -41,7 +41,6 @@ func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 
 			authHeader = "Bearer " + accessToken
 			c.Request.Header.Set("Authorization", authHeader)
-			fmt.Println("Authorization header set:", authHeader)
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
@@ -61,6 +60,7 @@ func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 		if err != nil || !token.Valid {
 			originalURL := c.Request.URL.String()
 			redirectToLogin(c, originalURL)
+			fmt.Println("Token:", token)
 			return
 		}
 
