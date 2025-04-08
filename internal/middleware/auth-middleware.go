@@ -44,41 +44,40 @@ func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		pubKey, err := getKeycloakPublicKey()
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get public key"})
-			return
-		}
+		// pubKey, err := getKeycloakPublicKey()
+		// if err != nil {
+		// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get public key"})
+		// 	return
+		// }
 
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			// Ensure the signing method is RS256
+			if token.Method != jwt.SigningMethodRS256 {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-			return pubKey, nil
+
+			// Fetch the public key using the "kid"
+			return getKeycloakPublicKey(token)
 		})
 
-		// token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// 	// Ensure the signing method is RS256
-		// 	if token.Method != jwt.SigningMethodRS256 {
-		// 		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		// 	}
-		
-		// 	// Fetch the public key using the token's kid
-		// 	return getKeycloakPublicKey(token)
-		// })
-		
 		if err != nil {
 			fmt.Printf("Token parsing error: %v\n", err)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			if strings.Contains(err.Error(), "token is malformed") {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Malformed token"})
+			} else if strings.Contains(err.Error(), "signature is invalid") {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token signature"})
+			} else {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token parsing error"})
+			}
 			return
 		}
-		
+
 		if !token.Valid {
 			fmt.Println("Token is invalid")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
-		
+
 		// Debugging: Print token claims
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
@@ -87,7 +86,6 @@ func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
 			return
 		}
 		fmt.Printf("Token claims: %+v\n", claims)
-		
 
 		if !hasRole(token, requiredRole, clientID) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
@@ -138,20 +136,29 @@ func redirectToLogin(c *gin.Context, originalURL string) {
 	c.Abort()
 }
 
-func getKeycloakPublicKey() (interface{}, error) {
+func getKeycloakPublicKey(token *jwt.Token) (interface{}, error) {
+	// Extract the "kid" from the token header
+	kid, ok := token.Header["kid"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing kid in token header")
+	}
+
+	// Fetch the JWKS
 	set, err := jwk.Fetch(context.Background(), jwksURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWK set: %v", err)
 	}
 
-	key, ok := set.Get(0)
-	if !ok {
-		return nil, fmt.Errorf("failed to get key from JWK set")
+	// Find the key with the matching "kid"
+	keys, _ := set.LookupKeyID(kid)
+	if keys == nil {
+		return nil, fmt.Errorf("no matching key found for kid: %s", kid)
 	}
 
+	// Extract the public key
 	var pubKey interface{}
-	if err := key.Raw(&pubKey); err != nil {
-		return nil, fmt.Errorf("failed to get raw key: %v", err)
+	if err := keys.Raw(&pubKey); err != nil {
+		return nil, fmt.Errorf("failed to extract public key: %v", err)
 	}
 
 	return pubKey, nil
