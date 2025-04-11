@@ -38,6 +38,8 @@ func main() {
 
 	regularGroup := r.Group("/")
 	regularGroup.Use(middleware.Auth("Regular", clientID))
+	regularGroup.Use(middleware.Sanitize())
+	regularGroup.Use(middleware.Validate())
 
 	regularGroup.GET("/artworks", controllers.ArtworkIndex)
 	regularGroup.GET("/artworks/:id", controllers.ArtworkFind)

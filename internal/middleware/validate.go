@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/paumarro/apollo-be/internal/dto"
@@ -12,6 +14,10 @@ var validate = validator.New()
 // Validate middleware validates the sanitized input
 func Validate() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if c.Request.Method == http.MethodGet || c.Request.Method == http.MethodDelete {
+			c.Next() // Pass control to the next middleware/handler
+			return
+		}
 		// Retrieve the sanitized input from the context
 		sanitizedArtwork, exists := c.Get("sanitizedArtwork")
 		if !exists {
