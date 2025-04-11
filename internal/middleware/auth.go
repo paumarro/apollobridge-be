@@ -24,7 +24,7 @@ var (
 	)
 )
 
-func AuthMiddleware(requiredRole string, clientID string) gin.HandlerFunc {
+func Auth(requiredRole string, clientID string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
