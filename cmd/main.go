@@ -25,27 +25,26 @@ func main() {
 
 	clientID := os.Getenv("KEYCLOAK_CLIENT_ID")
 
-	// Apply the AuthMiddleware to all routes in the group
-	galleryGroup := r.Group("/gallery")
-	galleryGroup.Use(middleware.AuthMiddleware("Gallery", clientID))
+	r.Use(middleware.RateLimit())
 
-	// Protected routes
+	galleryGroup := r.Group("/gallery")
+	galleryGroup.Use(middleware.Auth("Gallery", clientID))
+	galleryGroup.Use(middleware.Sanitize())
+	galleryGroup.Use(middleware.Validate())
+
 	galleryGroup.POST("/artworks", controllers.ArtworkCreate)
 	galleryGroup.PUT("/artworks/:id", controllers.ArtworkUpdate)
 	galleryGroup.DELETE("/artworks/:id", controllers.ArtworkDelete)
-	galleryGroup.GET("/test", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"test": "test",
-		})
-	})
 
 	regularGroup := r.Group("/")
-	regularGroup.Use(middleware.AuthMiddleware("Regular", clientID))
+	regularGroup.Use(middleware.Auth("Regular", clientID))
+	regularGroup.Use(middleware.Sanitize())
+	regularGroup.Use(middleware.Validate())
+
 	regularGroup.GET("/artworks", controllers.ArtworkIndex)
 	regularGroup.GET("/artworks/:id", controllers.ArtworkFind)
 
 	r.GET("/auth/callback", controllers.AuthCallback)
 
-	// Run the server
 	r.Run()
 }
