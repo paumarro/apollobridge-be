@@ -76,7 +76,7 @@ func AuthCallback(c *gin.Context) {
 	}
 
 	c.SetCookie("access_token", accessToken, 3600, "/", apollobridgeDomain, true, true)
-	fmt.Printf("Cookie set: ", accessToken)
+	fmt.Println("Cookie set: ", accessToken)
 
 	if originalURL != "" {
 		c.Redirect(http.StatusFound, originalURL)
