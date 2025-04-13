@@ -2,7 +2,9 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,6 +26,55 @@ var (
 	)
 )
 
+func refreshAccessToken(refreshToken string) (string, string, error) {
+	kcClientSecret := os.Getenv("KEYCLOAK_CLIENT_SECRET")
+	kcClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
+	kcDomain := os.Getenv("KEYCLOAK_DOMAIN")
+
+	tokenURL := fmt.Sprintf("https://%s/realms/apollo/protocol/openid-connect/token", kcDomain)
+
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("refresh_token", refreshToken)
+	data.Set("client_id", kcClientID)
+	data.Set("client_secret", kcClientSecret)
+
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create refresh token request: %v", err)
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to refresh token: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return "", "", fmt.Errorf("failed to refresh token: %s", string(bodyBytes))
+	}
+
+	var tokenResponse map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+		return "", "", fmt.Errorf("failed to decode refresh token response: %v", err)
+	}
+
+	accessToken, ok := tokenResponse["access_token"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("invalid refresh token response: missing access token")
+	}
+
+	newRefreshToken, ok := tokenResponse["refresh_token"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("invalid refresh token response: missing refresh token")
+	}
+
+	return accessToken, newRefreshToken, nil
+}
+
 func Auth(requiredRole string, clientID string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -37,62 +88,65 @@ func Auth(requiredRole string, clientID string) gin.HandlerFunc {
 				redirectToLogin(c, originalURL)
 				return
 			}
-			fmt.Println("Access token fetched from cookie:", accessToken)
 
 			authHeader = "Bearer " + accessToken
 			c.Request.Header.Set("Authorization", authHeader)
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		// pubKey, err := getKeycloakPublicKey()
-		// if err != nil {
-		// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get public key"})
-		// 	return
-		// }
 
+		// Parse the token
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			// Ensure the signing method is RS256
 			if token.Method != jwt.SigningMethodRS256 {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-
-			// Fetch the public key using the "kid"
 			return getKeycloakPublicKey(token)
 		})
 
-		if err != nil {
-			fmt.Printf("Token parsing error: %v\n", err)
-			if strings.Contains(err.Error(), "token is malformed") {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Malformed token"})
-			} else if strings.Contains(err.Error(), "signature is invalid") {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token signature"})
-			} else {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token parsing error"})
+		if err != nil || !token.Valid {
+			// Check if the error is due to token expiry
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				if exp, ok := claims["exp"].(float64); ok && int64(exp) < time.Now().Unix() {
+					fmt.Println("Access token expired, attempting to refresh")
+
+					// Fetch the refresh token
+					refreshToken, err := c.Cookie("refresh_token")
+					if err != nil {
+						fmt.Println("Error fetching refresh_token cookie:", err)
+						redirectToLogin(c, c.Request.URL.String())
+						return
+					}
+
+					// Attempt to refresh the token
+					newAccessToken, newRefreshToken, err := refreshAccessToken(refreshToken)
+					if err != nil {
+						fmt.Println("Failed to refresh token:", err)
+						redirectToLogin(c, c.Request.URL.String())
+						return
+					}
+
+					// Update cookies with the new tokens
+					c.SetCookie("access_token", newAccessToken, 3600, "/", apollobridgeDomain, true, true)
+					c.SetCookie("refresh_token", newRefreshToken, 3600*24, "/", apollobridgeDomain, true, true)
+
+					// Retry the request with the new access token
+					c.Request.Header.Set("Authorization", "Bearer "+newAccessToken)
+					c.Next()
+					return
+				}
 			}
-			return
-		}
 
-		if !token.Valid {
-			fmt.Println("Token is invalid")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			// Other token errors
+			fmt.Printf("Token parsing error: %v\n", err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			return
 		}
-
-		// Debugging: Print token claims
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			fmt.Println("Failed to parse claims")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
-			return
-		}
-		fmt.Printf("Token claims: %+v\n", claims)
 
 		if !hasRole(token, requiredRole, clientID) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
 			return
 		}
 
-		// Token is valid, proceed with the request
 		c.Next()
 	}
 }

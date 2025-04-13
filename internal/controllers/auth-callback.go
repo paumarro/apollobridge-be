@@ -75,8 +75,17 @@ func AuthCallback(c *gin.Context) {
 		return
 	}
 
+	refreshToken, ok := tokenResponse["refresh_token"].(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid token response: missing refresh token"})
+		return
+	}
+
+	c.SetCookie("refresh_token", refreshToken, 3600*24, "/", apollobridgeDomain, true, true)
+
 	c.SetCookie("access_token", accessToken, 3600, "/", apollobridgeDomain, true, true)
-	fmt.Println("Cookie set: ", accessToken)
+
+	fmt.Printf("Access and refresh tokens set in cookies\n")
 
 	if originalURL != "" {
 		c.Redirect(http.StatusFound, originalURL)
