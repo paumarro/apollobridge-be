@@ -1,3 +1,5 @@
+
+
 ### **Cyber Security Measures Implemented by Railway**
 1. **HTTPS Everywhere**  
    - Automatic provisioning of TLS/SSL certificates for deployed applications, ensuring HTTPS is enforced for all connections.
@@ -17,13 +19,6 @@
 6. **Access Control**  
    - Role-based access control (RBAC) ensures only authorized users can manage deployments and resources.
 
----
-
-### **Additional Measures (Gin Framework)**
-- **Header Management**  
-   - Common headers like `Authorization` or `Content-Type` are securely handled by the framework, reducing the need for manual sanitization.
-
----
 
 ### **Security Measures handled in source code**
 1. **Input Validation**  
@@ -41,27 +36,26 @@
 5. **Security Headers**  
    - Implements headers like `Content-Security-Policy`, `X-Frame-Options`, and `Strict-Transport-Security` to mitigate various browser-based attacks.
 
-6. **Authentication and Authorization**  
+6. **Header Management**  
+   - Ensures secure handling of common headers like `Authorization` and `Content-Type` to prevent header injection and ensure proper API communication.
+
+7. **Authentication and Authorization**  
    - Enforces identity verification and access control through mechanisms such as Keycloak integration, JWT tokens, and validation of user credentials.
 
-7. **Session Management**  
+8. **Session Management**  
    - Implements secure session handling, including short-lived access tokens (e.g., 10-minute lifespan) and rotating refresh tokens to reduce the risk of token theft.
 
-8. **Logging and Monitoring**  
+9. **Logging and Monitoring**  
    - Tracks system activity, detects anomalies, and alerts administrators to potential security incidents.
 
-9. **Database Security**  
+10. **Database Security**  
    - Enforces security measures like encryption, access controls, and regular audits to protect sensitive data stored in databases.
 
-10. **Rate Limiting**  
+11. **Rate Limiting**  
    - Limits the number of requests a user or IP can make within a specific time frame, mitigating brute force and denial-of-service attacks.
 
-11. **File Upload Security**  
+12. **File Upload Security**  
    - Scans and validates uploaded files to prevent malicious files from being executed or stored on the server.
 
-12. **Dependency Management**  
+13. **Dependency Management**  
    - Regularly updates and audits third-party libraries and dependencies to ensure they are free from known vulnerabilities.
-
----
-
-This expanded list now provides a detailed explanation for all measures, including those not fully handled by Railway. Let me know if there’s anything else you’d like to tweak!
