@@ -33,7 +33,7 @@ jobs:
         run: go test ./... -v
 
   security:
-    name: Run Gosec Security Scan
+    name: Run Security Scans
     runs-on: ubuntu-latest
 
     steps:
@@ -54,3 +54,12 @@ jobs:
       # Step 4: Run Gosec
       - name: Run Gosec
         run: gosec ./...
+
+      # Step 5: Install govulncheck
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      # Step 6: Run govulncheck
+      - name: Run c
+        run: govulncheck ./...
+
