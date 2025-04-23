@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -92,15 +91,13 @@ func Auth(requiredRole string, clientID string) gin.HandlerFunc {
 			}
 
 			authHeader = "Bearer " + accessToken
-			log.Println(accessToken)
 			c.Request.Header.Set("Authorization", authHeader)
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		log.Println(tokenString)
 
 		// Mitigation: Validate length of token to avoid excessive memory allocation
-		if len(tokenString) > 1024 {
+		if len(tokenString) > 2024 {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "JWT too large"})
 			return
 		}
