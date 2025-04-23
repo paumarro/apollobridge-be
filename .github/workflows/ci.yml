@@ -61,8 +61,7 @@ jobs:
 
       # Step 6: Run govulncheck
       - name: Run govulncheck
-        run: | 
-          govulncheck ./... || echo "Ignoring GO-2025-3553 vulnerability"
+        run: govulncheck ./... 
           
   deploy:
     name: Deploy to Railway
