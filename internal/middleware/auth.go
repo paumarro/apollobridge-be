@@ -96,6 +96,12 @@ func Auth(requiredRole string, clientID string) gin.HandlerFunc {
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
+		// Mitigation: Validate length of token to avoid excessive memory allocation
+		if len(tokenString) > 1024 {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "JWT too large"})
+			return
+		}
+
 		// Parse the token
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if token.Method != jwt.SigningMethodRS256 {
