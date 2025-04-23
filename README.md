@@ -1,4 +1,6 @@
+Here’s the updated list with **CORS** removed:
 
+---
 
 ### **Cyber Security Measures Implemented by Railway**
 1. **HTTPS Everywhere**  
@@ -19,43 +21,39 @@
 6. **Access Control**  
    - Role-based access control (RBAC) ensures only authorized users can manage deployments and resources.
 
+---
 
-### **Security Measures handled in source code**
+### **Security Measures Not Fully Handled by Railway**
 1. **Input Validation**  
    - Ensures that all user-provided data is validated to prevent injection attacks, malformed data, or other vulnerabilities.
 
 2. **Output Encoding**  
    - Encodes data before rendering it to users, preventing injection-based attacks like Cross-Site Scripting (XSS).
 
-3. **Cross-Origin Resource Sharing (CORS)**  
-   - Manages which domains are allowed to access resources, preventing unauthorized cross-domain requests.
-
-4. **Signed URLs for Uploads and Fetching**  
-   - Uses time-limited, signed URLs to securely control access to uploaded or fetched resources.
-
-5. **Security Headers**  
+4. **Security Headers**  
    - Implements headers like `Content-Security-Policy`, `X-Frame-Options`, and `Strict-Transport-Security` to mitigate various browser-based attacks.
 
-6. **Header Management**  
+5. **Header Management**  
    - Ensures secure handling of common headers like `Authorization` and `Content-Type` to prevent header injection and ensure proper API communication.
 
-7. **Authentication and Authorization**  
+6. **Authentication and Authorization**  
    - Enforces identity verification and access control through mechanisms such as Keycloak integration, JWT tokens, and validation of user credentials.
 
-8. **Session Management**  
+7. **Session Management**  
    - Implements secure session handling, including short-lived access tokens (e.g., 10-minute lifespan) and rotating refresh tokens to reduce the risk of token theft.
 
-9. **Logging and Monitoring**  
+8. **Logging and Monitoring**  
    - Tracks system activity, detects anomalies, and alerts administrators to potential security incidents.
 
-10. **Database Security**  
-   - Enforces security measures like encryption, access controls, and regular audits to protect sensitive data stored in databases.
+9. **Database Security**  
+   - Enforces security measures like parameterized queries to prevent SQL injections, access controls, and regular audits to protect sensitive data stored in databases. ORM like `GORM` to interact with the database securely.
+- Always use :
 
-11. **Rate Limiting**  
+10. **Rate Limiting**  
    - Limits the number of requests a user or IP can make within a specific time frame, mitigating brute force and denial-of-service attacks.
 
-12. **File Upload Security**  
+11. **File Upload Security (in the Frontend and Storage Server)**  
    - Scans and validates uploaded files to prevent malicious files from being executed or stored on the server.
 
-13. **Dependency Management**  
-   - Regularly updates and audits third-party libraries and dependencies to ensure they are free from known vulnerabilities.
+12. **Dependency Management**  
+   - CI Pipeline for regularly updates and audits third-party libraries and dependencies to ensure they are free from known vulnerabilities with tools like GOSEC and GOVULNCHECK
