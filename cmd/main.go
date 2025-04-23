@@ -46,5 +46,7 @@ func main() {
 
 	r.GET("/auth/callback", controllers.AuthCallback)
 
-	r.Run()
+	if err := r.Run(); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }

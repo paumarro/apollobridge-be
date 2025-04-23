@@ -49,7 +49,9 @@ func AuthCallback(c *gin.Context) {
 	}
 	defer func() {
 		if resp != nil {
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				fmt.Printf("Error closing response body: %v\n", err)
+			}
 		}
 	}()
 
