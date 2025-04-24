@@ -1,7 +1,3 @@
-Here’s the updated list with **CORS** removed:
-
----
-
 ### **Cyber Security Measures Implemented by Railway**
 1. **HTTPS Everywhere**  
    - Automatic provisioning of TLS/SSL certificates for deployed applications, ensuring HTTPS is enforced for all connections.
