@@ -62,20 +62,4 @@ jobs:
       # Step 6: Run govulncheck
       - name: Run govulncheck
         run: govulncheck ./... 
-          
-  deploy:
-    name: Deploy to Railway
-    runs-on: ubuntu-latest
-
-
-    steps:
-      # Step 1: Checkout the code
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      # Step 2: Deploy to Railway
-      - name: Deploy to Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
-          railway up
+  
