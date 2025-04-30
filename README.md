@@ -3,12 +3,12 @@ Apollo Bridge is a cutting-edge mobile app designed to revolutionize the gallery
 
 Whether you're an art enthusiast or a casual visitor, Apollo Bridge bridges the gap between art and technology, offering a deeper, more personalized understanding of the exhibits around you.
 
-### **Thread Model**
+# **Thread Model**
 
 ![ThreadModelLowRes](https://github.com/user-attachments/assets/48a9a72c-fe28-4e86-8166-88595280a2b8)
 
-
-### **Cyber Security Measures Implemented by Railway**
+#Security Measires
+## **Cyber Security Measures Implemented by Railway**
 1. **HTTPS Everywhere**  
    - Automatic provisioning of TLS/SSL certificates for deployed applications, ensuring HTTPS is enforced for all connections.
 
