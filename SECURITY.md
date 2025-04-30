@@ -1,4 +1,4 @@
-# **Thread Model
+# **Thread Model**
 
 ![Thread Model](https://github.com/user-attachments/assets/48a9a72c-fe28-4e86-8166-88595280a2b8)
 
