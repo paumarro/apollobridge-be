@@ -67,4 +67,3 @@
 11. **Dependency Management**  
     - Automates updates and audits of third-party libraries and dependencies through CI pipelines, ensuring they are free from known vulnerabilities using tools like `GOSEC` and `GOVULNCHECK`.
 
----
