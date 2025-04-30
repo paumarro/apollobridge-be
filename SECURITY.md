@@ -1,6 +1,4 @@
-Here’s the updated version with **sanitization** included:
 
----
 
 # **Thread Model and Cybersecurity Measures**
 
