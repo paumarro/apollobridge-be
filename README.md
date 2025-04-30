@@ -1,3 +1,8 @@
+### **Thread Model**
+
+![ThreadModelLowRes](https://github.com/user-attachments/assets/48a9a72c-fe28-4e86-8166-88595280a2b8)
+
+
 ### **Cyber Security Measures Implemented by Railway**
 1. **HTTPS Everywhere**  
    - Automatic provisioning of TLS/SSL certificates for deployed applications, ensuring HTTPS is enforced for all connections.
