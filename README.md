@@ -1,22 +1,21 @@
 # **Apollo Bridge**
+
 Apollo Bridge is a cutting-edge mobile app designed to revolutionize the gallery and museum experience. With Apollo Bridge, visitors can seamlessly interact with artworks by simply scanning them with their phones. The app provides instant access to curated information about each piece, delivered directly by the gallery or museum.
 
 Whether you're an art enthusiast or a casual visitor, Apollo Bridge bridges the gap between art and technology, offering a deeper, more personalized understanding of the exhibits around you.
 
-## **Lets get Started**
+---
+
+## **Let's Get Started**
 
 ### **1. Prerequisites**
 Ensure you have the following installed on your system:
-- **Go**: Version `1.23.0` or higher. You can download it from [golang.org](https://golang.org/dl/).  
-- **PostgreSQL**: Ensure PostgreSQL is installed and running.  
-- **SQLite**: Ensure the SQLite library is installed.  
-- **Git**: For cloning the repository.  
-
-Verify your installations:
-```bash
-go version
-git --version
-```
+- **Docker**: Ensure Docker is installed and running. You can download it from [docker.com](https://www.docker.com/).
+- **Docker Compose**: Comes bundled with Docker Desktop or can be installed separately. Verify installation:
+  ```bash
+  docker compose --version
+  ```
+- **Git**: For cloning the repository.
 
 ---
 
@@ -29,131 +28,97 @@ cd apollo-be
 
 ---
 
-### **3. Install Dependencies**
-Run the following command to install all Go module dependencies specified in `go.mod`:
-```bash
-go mod tidy
+### **3. Configure Environment Variables**
+Apollo Bridge uses environment variables to manage configuration securely. Create a `.env` file in the root directory of the project (or copy the provided `.env.example` file) and define the following variables:
+
+```env
+# Database Configuration
+POSTGRES_USER=myuser
+POSTGRES_PASSWORD=securepassword
+POSTGRES_DB=art
+ART_DB_URL=postgres://myuser:securepassword@db:5432/art
+
+# Keycloak Configuration
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=secureadminpassword
+KEYCLOAK_DOMAIN=http://keycloak:8080
+KEYCLOAK_CLIENT_ID=apollo-client
+KEYCLOAK_CLIENT_SECRET=your-client-secret
+JWKS_URL=http://keycloak:8080/realms/apollo/protocol/openid-connect/certs
 ```
 
-This will download and organize all required dependencies.
+> **Note:** Replace `securepassword` and `secureadminpassword` with strong passwords. The `KEYCLOAK_CLIENT_SECRET` will be generated in the Keycloak Admin Console (explained below).
 
 ---
 
-### **4. Set Up Environment Variables**
-The server depends on certain environment variables for configuration. Edit the `.env.example` (change name to `.env`) file in the root directory of the project and define the required variables.
+### **4. Set Up and Run with Docker**
+The backend and Keycloak services are configured to run using Docker Compose. Follow these steps:
 
-> Replace `DATABASE_URL` with your actual database connection string. If you're using SQLite, you can specify the path to the SQLite database file, e.g., `DATABASE_URL=sqlite3://./apollo.db`.
+1. **Update the `docker-compose.yml` File with the defined env variables**  
+
+
+2. **Start the Services**  
+   Run the following command to start all services:
+   ```bash
+   docker compose up --build
+   ```
+
+   This will:
+   - Build and run the backend service (`art-service`) on port `3000`.
+   - Set up a PostgreSQL database (`db`) on port `5432`.
+   - Start Keycloak (`keycloak`) on port `8080`.
+
+3. **Access Keycloak**  
+   - Open your browser and navigate to `http://localhost:8080`.
+   - Log in to the Keycloak Admin Console using the credentials from your `.env` file (`KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD`).
 
 ---
 
-### **5. Set Up the Database (if required)**
-If your backend uses a database (like PostgreSQL or SQLite), ensure the database is set up:
-1. **PostgreSQL**:
-   - Create a database:
-     ```bash
-     createdb apollo_db
+### **5. Configure Keycloak**
+1. **Create a Realm**  
+   - In the Keycloak Admin Console, create a new realm named `apollo`.
+
+2. **Set Up a Client**  
+   - In the `apollo` realm, navigate to the **Clients** section and click **Create**.
+   - Set the following:
+     - **Client ID**: `apollo-client`
+     - **Client Protocol**: `openid-connect`
+     - **Access Type**: `confidential`
+   - Save the client, then go to the **Credentials** tab to copy the `Client Secret`. Add this to your `.env` file as `KEYCLOAK_CLIENT_SECRET`.
+
+3. **Configure Redirect URIs**  
+   - In the client settings, under the **Valid Redirect URIs** field, add the callback URL for your app:
      ```
-   - Update the `DATABASE_URL` in your `.env` file accordingly.
+     http://localhost:3000/auth/callback
+     ```
+
+4. **Set Up Users**  
+   - Navigate to the **Users** section and create test users for authentication. Assign them appropriate roles if needed.
 
 ---
 
-### **6. Run the Backend**
-Start the backend server with the following command:
-```bash
-go run .
-```
-
-This will compile and run the application. By default, the server will run on the port specified in the `.env` file (e.g., `8080`).
-
----
-
-### **7. Test the Backend**
-Once the server is running, test it to ensure it’s working:
+### **6. Test the Backend**
+Once all services are running, test the backend to ensure it’s working:
 - Open a browser or use a tool like [Postman](https://www.postman.com/) or `curl` to make requests to the server.
-- Example: Test the health endpoint (if implemented):
-  ```bash
-  curl http://localhost:8080/health
-  ```
 
 ---
 
-### **8. Troubleshooting**
-- If you encounter issues with dependencies, try running:
-  ```bash
-  go clean -modcache
-  go mod tidy
-  ```
-- Check the logs for errors related to environment variables or database connections.
+### **7. Troubleshooting**
+- If Keycloak is inaccessible, ensure the `KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD` in the `.env` file match the values in `docker-compose.yml`.
+- If the backend cannot connect to the database, verify the `ART_DB_URL` format in the `.env` file.
 
 ---
 
-### **9. Optional: Build the Application**
-To create a binary for deployment, use:
+### **8. Stopping the Services**
+To stop all running services, use:
 ```bash
-go build -o apollo-be
+docker compose down
 ```
 
-You can then run the binary with:
-```bash
-./apollo-be
-```
+This will stop and remove all containers, but data in volumes (`db-data` and `keycloak-data`) will persist.
 
 ---
 
+### **9. Optional: Build the Backend Locally**
+If you prefer running the backend locally instead of Docker, follow the steps in the original instructions to set up Go, dependencies, and the database.
 
-## **Thread Model**
-
-![ThreadModelLowRes](https://github.com/user-attachments/assets/48a9a72c-fe28-4e86-8166-88595280a2b8)
-
-# Cyber Security Measures
-## **Cyber Security Measures Implemented by Railway**
-1. **HTTPS Everywhere**  
-   - Automatic provisioning of TLS/SSL certificates for deployed applications, ensuring HTTPS is enforced for all connections.
-
-2. **Secure Defaults**  
-   - Encourages secure configurations by default, such as isolating environments and providing secure connection strings for databases.
-
-3. **Environment Variables**  
-   - Provides a secure way to manage secrets and environment variables, reducing the risk of exposing sensitive information in code.
-
-4. **Infrastructure Security**  
-   - Handles server and network-level security, including firewalls and protection against common infrastructure-level attacks like DDoS.
-
-5. **Content Delivery Network (CDN)**  
-   - Offers integration with a CDN to help with caching and mitigating certain attacks like Distributed Denial of Service (DDoS).
-
-6. **Access Control**  
-   - Role-based access control (RBAC) ensures only authorized users can manage deployments and resources.
-
----
-
-### **Security Measures handled in the GO Backend**
-1. **Input Validation**  
-   - Ensures that all user-provided data is validated to prevent injection attacks, malformed data, or other vulnerabilities.
-
-2. **Output Encoding**  
-   - Encodes data before rendering it to users, preventing injection-based attacks like Cross-Site Scripting (XSS).
-
-4. **Security Headers**  
-   - Implements headers like `Content-Security-Policy`, `X-Frame-Options`, and `Strict-Transport-Security` to mitigate various browser-based attacks.
-
-5. **Header Management**  
-   - Ensures secure handling of common headers like `Authorization` and `Content-Type` to prevent header injection and ensure proper API communication.
-
-6. **Authentication and Authorization**  
-   - Enforces identity verification and access control through mechanisms such as Keycloak integration, JWT tokens, and validation of user credentials.
-
-7. **Session Management**  
-   - Implements secure session handling, including short-lived access tokens (e.g., 10-minute lifespan) and rotating refresh tokens to reduce the risk of token theft.
-
-8. **Logging and Monitoring**  
-   - Tracks system activity, detects anomalies, and alerts administrators to potential security incidents.
-
-9. **Database Security**  
-   - Enforces security measures like parameterized queries to prevent SQL injections, access controls, and regular audits to protect sensitive data stored in databases. ORM like `GORM` to interact with the database securely.
-
-10. **Rate Limiting**  
-   - Limits the number of requests a user or IP can make within a specific time frame, mitigating brute force and denial-of-service attacks.
-
-11. **Dependency Management**  
-   - CI Pipeline for regularly updates and audits third-party libraries and dependencies to ensure they are free from known vulnerabilities with tools like GOSEC and GOVULNCHECK
