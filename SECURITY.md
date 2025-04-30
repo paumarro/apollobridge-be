@@ -50,7 +50,7 @@ Ensures secure handling of headers such as `Authorization` and `Content-Type` to
 Integrates robust identity verification and access control mechanisms, including Keycloak integration, JWT-based authentication, and credential validation. Role-based access is enforced to ensure that only gallery users can perform sensitive operations like posting, editing, or deleting artworks.
 
 **Session Management**  
-Implements secure session handling with short-lived access tokens (e.g., 10-minute lifespan) and rotating refresh tokens to mitigate token theft risks.
+Implements secure session handling with short-lived access tokens (10-minute lifespan) and rotating refresh tokens to mitigate token theft risks.
 
 **Logging and Monitoring**  
 Monitors system activity to detect anomalies and provides alerts for potential security incidents.
