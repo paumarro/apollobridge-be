@@ -22,10 +22,7 @@ Manages server and network-level security, including firewalls and protection ag
 Integrates with a CDN to enhance caching and mitigate risks from attacks like DDoS.
 
 **Access Control**  
-Implements Role-Based Access Control (RBAC) to ensure that only authorized users can manage deployments and resources.  
-- **Regular Users**: Limited access, allowing only the viewing of artworks.  
-- **Gallery Users**: Elevated permissions to post, edit, or delete artworks, ensuring sensitive operations are restricted to authorized users.  
-
+Implements Role-Based Access Control (RBAC) to ensure that only authorized users can manage deployments and resources.
 **Private-Network Communication**  
 Deploys applications in environments where internal services communicate over private IP ranges, reducing exposure to the public internet. Implements network access controls (NAC) and encrypted channels to secure data in transit.
 
