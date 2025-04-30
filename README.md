@@ -1,4 +1,4 @@
-### **Apollo Bridge**
+# **Apollo Bridge**
 Apollo Bridge is a cutting-edge mobile app designed to revolutionize the gallery and museum experience. With Apollo Bridge, visitors can seamlessly interact with artworks by simply scanning them with their phones. The app provides instant access to curated information about each piece, delivered directly by the gallery or museum.
 
 Whether you're an art enthusiast or a casual visitor, Apollo Bridge bridges the gap between art and technology, offering a deeper, more personalized understanding of the exhibits around you.
