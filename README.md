@@ -3,7 +3,7 @@ Apollo Bridge is a cutting-edge mobile app designed to revolutionize the gallery
 
 Whether you're an art enthusiast or a casual visitor, Apollo Bridge bridges the gap between art and technology, offering a deeper, more personalized understanding of the exhibits around you.
 
-# ***Lets get Started
+# **Lets get Started**
 
 ### **1. Prerequisites**
 Ensure you have the following installed on your system:
