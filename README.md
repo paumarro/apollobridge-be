@@ -40,13 +40,7 @@ This will download and organize all required dependencies.
 ---
 
 ### **4. Set Up Environment Variables**
-The server depends on certain environment variables for configuration. Create a `.env` file in the root directory of the project and define the required variables.
-
-```env
-DATABASE_URL=postgres://username:password@localhost:5432/apollo_db
-JWT_SECRET=your_secret_key
-PORT=8080
-```
+The server depends on certain environment variables for configuration. Edit the `.env.example` (change name to `.env`) file in the root directory of the project and define the required variables.
 
 > Replace `DATABASE_URL` with your actual database connection string. If you're using SQLite, you can specify the path to the SQLite database file, e.g., `DATABASE_URL=sqlite3://./apollo.db`.
 
