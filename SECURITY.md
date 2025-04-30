@@ -23,6 +23,7 @@ Integrates with a CDN to enhance caching and mitigate risks from attacks like DD
 
 **Access Control**  
 Implements Role-Based Access Control (RBAC) to ensure that only authorized users can manage deployments and resources.
+
 **Private-Network Communication**  
 Deploys applications in environments where internal services communicate over private IP ranges, reducing exposure to the public internet. Implements network access controls (NAC) and encrypted channels to secure data in transit.
 
