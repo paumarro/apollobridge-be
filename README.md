@@ -3,6 +3,110 @@ Apollo Bridge is a cutting-edge mobile app designed to revolutionize the gallery
 
 Whether you're an art enthusiast or a casual visitor, Apollo Bridge bridges the gap between art and technology, offering a deeper, more personalized understanding of the exhibits around you.
 
+# ***Lets get Started
+
+### **1. Prerequisites**
+Ensure you have the following installed on your system:
+- **Go**: Version `1.23.0` or higher. You can download it from [golang.org](https://golang.org/dl/).  
+- **PostgreSQL**: Ensure PostgreSQL is installed and running.  
+- **SQLite**: Ensure the SQLite library is installed.  
+- **Git**: For cloning the repository.  
+
+Verify your installations:
+```bash
+go version
+git --version
+```
+
+---
+
+### **2. Clone the Repository**
+Clone your backend repository to your local environment:
+```bash
+git clone https://github.com/paumarro/apollo-be.git
+cd apollo-be
+```
+
+---
+
+### **3. Install Dependencies**
+Run the following command to install all Go module dependencies specified in `go.mod`:
+```bash
+go mod tidy
+```
+
+This will download and organize all required dependencies.
+
+---
+
+### **4. Set Up Environment Variables**
+The server depends on certain environment variables for configuration. Create a `.env` file in the root directory of the project and define the required variables.
+
+```env
+DATABASE_URL=postgres://username:password@localhost:5432/apollo_db
+JWT_SECRET=your_secret_key
+PORT=8080
+```
+
+> Replace `DATABASE_URL` with your actual database connection string. If you're using SQLite, you can specify the path to the SQLite database file, e.g., `DATABASE_URL=sqlite3://./apollo.db`.
+
+---
+
+### **5. Set Up the Database (if required)**
+If your backend uses a database (like PostgreSQL or SQLite), ensure the database is set up:
+1. **PostgreSQL**:
+   - Create a database:
+     ```bash
+     createdb apollo_db
+     ```
+   - Update the `DATABASE_URL` in your `.env` file accordingly.
+
+---
+
+### **6. Run the Backend**
+Start the backend server with the following command:
+```bash
+go run .
+```
+
+This will compile and run the application. By default, the server will run on the port specified in the `.env` file (e.g., `8080`).
+
+---
+
+### **7. Test the Backend**
+Once the server is running, test it to ensure it’s working:
+- Open a browser or use a tool like [Postman](https://www.postman.com/) or `curl` to make requests to the server.
+- Example: Test the health endpoint (if implemented):
+  ```bash
+  curl http://localhost:8080/health
+  ```
+
+---
+
+### **8. Troubleshooting**
+- If you encounter issues with dependencies, try running:
+  ```bash
+  go clean -modcache
+  go mod tidy
+  ```
+- Check the logs for errors related to environment variables or database connections.
+
+---
+
+### **9. Optional: Build the Application**
+To create a binary for deployment, use:
+```bash
+go build -o apollo-be
+```
+
+You can then run the binary with:
+```bash
+./apollo-be
+```
+
+---
+
+
 # **Thread Model**
 
 ![ThreadModelLowRes](https://github.com/user-attachments/assets/48a9a72c-fe28-4e86-8166-88595280a2b8)
