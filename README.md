@@ -133,7 +133,7 @@ You can then run the binary with:
 
 ---
 
-### **Security Measures Not Fully Handled by Railway**
+### **Security Measures handled in the GO Backend**
 1. **Input Validation**  
    - Ensures that all user-provided data is validated to prevent injection attacks, malformed data, or other vulnerabilities.
 
@@ -157,13 +157,9 @@ You can then run the binary with:
 
 9. **Database Security**  
    - Enforces security measures like parameterized queries to prevent SQL injections, access controls, and regular audits to protect sensitive data stored in databases. ORM like `GORM` to interact with the database securely.
-- Always use :
 
 10. **Rate Limiting**  
    - Limits the number of requests a user or IP can make within a specific time frame, mitigating brute force and denial-of-service attacks.
 
-11. **File Upload Security (in the Frontend and Storage Server)**  
-   - Scans and validates uploaded files to prevent malicious files from being executed or stored on the server.
-
-12. **Dependency Management**  
+11. **Dependency Management**  
    - CI Pipeline for regularly updates and audits third-party libraries and dependencies to ensure they are free from known vulnerabilities with tools like GOSEC and GOVULNCHECK
