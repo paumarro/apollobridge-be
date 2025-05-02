@@ -6,11 +6,9 @@ Whether you're an art enthusiast or a casual visitor, Apollo Bridge bridges the 
 
 ---
 
-This repository only covers the main Backend of the application. To view the rest of the parts please use the following links:
+This repository only covers the main Backend of the application. To view the rest of the parts please use the following link:
 
-Frontend: https://github.com/odonald/apollobridge-front
-
-Image Recognition Service: https://github.com/odonald/apollobridge-model-service
+https://github.com/odonald/apollobridge-frontend-and-imageservice
 
 ---
 
