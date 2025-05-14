@@ -20,9 +20,11 @@ var (
 	kcDomain           = os.Getenv("KEYCLOAK_DOMAIN")
 	apollobridgeDomain = os.Getenv("APOLLO_DOMAIN")
 	jwksURL            = os.Getenv("JWKS_URL")
+	client_id          = os.Getenv("KEYCLOAK_CLIENT_ID")
 	loginPageUrl       = fmt.Sprintf(
-		"https://%s/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=apollo-client&redirect_uri=https://%s/auth/callback&scope=openid",
+		"https://%s/realms/apollo/protocol/openid-connect/auth?response_type=code&client_id=%s&redirect_uri=https://%s/auth/callback&scope=openid",
 		kcDomain,
+		client_id,
 		apollobridgeDomain,
 	)
 )
