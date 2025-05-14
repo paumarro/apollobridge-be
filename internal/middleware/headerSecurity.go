@@ -5,7 +5,7 @@ import (
 )
 
 // SecurityHeadersMiddleware sets various security headers
-func SecurityHeadersMiddleware() gin.HandlerFunc {
+func SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 1. Prevent Clickjacking
 		c.Writer.Header().Set("X-Frame-Options", "DENY")
