@@ -26,6 +26,7 @@ func main() {
 	clientID := os.Getenv("KEYCLOAK_CLIENT_ID")
 
 	r.Use(middleware.RateLimit())
+	r.Use(middleware.SecurityHeaders())
 
 	galleryGroup := r.Group("/gallery")
 	galleryGroup.Use(middleware.Auth("Gallery", clientID))
