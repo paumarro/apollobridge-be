@@ -28,8 +28,8 @@ func SecurityHeaders() gin.HandlerFunc {
 		// 7. Permissions Policy
 		c.Writer.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()")
 
-		// 8. Cross-Origin Resource Sharing (CORS) Headers (optional)
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		// 8. Cross-Origin Resource Sharing (CORS) Headers
+		// c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
