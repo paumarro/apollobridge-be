@@ -45,7 +45,7 @@ func main() {
 	regularGroup.GET("/artworks", controllers.ArtworkIndex)
 	regularGroup.GET("/artworks/:id", controllers.ArtworkFind)
 
-	r.GET("/auth/callback", controllers.AuthCallback)
+	r.GET("/auth/callback", middleware.Sanitize(), middleware.Validate(), controllers.AuthCallback)
 
 	if err := r.Run(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
