@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/paumarro/apollo-be/internal/dto"
@@ -53,6 +53,7 @@ func validateQueryParams(c *gin.Context) error {
 			return fmt.Errorf("query parameter key '%s' is too long", key)
 		}
 		for _, value := range values {
+			// Decode URL-encoded value
 			decodedValue, err := url.QueryUnescape(value)
 			if err != nil {
 				return fmt.Errorf("failed to decode query parameter '%s'", key)
@@ -61,7 +62,7 @@ func validateQueryParams(c *gin.Context) error {
 			if len(decodedValue) > 255 {
 				return fmt.Errorf("query parameter value for key '%s' is too long", key)
 			}
-			if !isSafeString(decodedValue) {
+			if !isSafeQueryValue(decodedValue) {
 				return fmt.Errorf("query parameter value for key '%s' contains invalid characters", key)
 			}
 		}
@@ -75,7 +76,7 @@ func validatePathParams(c *gin.Context) error {
 		if len(param.Value) > 255 {
 			return fmt.Errorf("path parameter '%s' is too long", param.Key)
 		}
-		if !isSafeString(param.Value) {
+		if !isSafeQueryValue(param.Value) {
 			return fmt.Errorf("path parameter '%s' contains invalid characters", param.Key)
 		}
 	}
@@ -99,11 +100,10 @@ func validateRequestBody(c *gin.Context) map[string]string {
 	return nil
 }
 
-// isSafeString validates a string using a whitelist approach
-func isSafeString(input string) bool {
-	// Allow alphanumeric characters, spaces, and a few safe symbols
-	allowed := regexp.MustCompile(`^[a-zA-Z0-9\s\-_.,@!\/]*$`)
-	return allowed.MatchString(input)
+// isSafeQueryValue validates a query or path parameter value using govalidator
+func isSafeQueryValue(value string) bool {
+	// Allow valid URLs, alphanumeric characters, and some safe symbols
+	return govalidator.IsURL(value) || govalidator.IsPrintableASCII(value)
 }
 
 // formatValidationErrors formats validation errors into a user-friendly map
