@@ -108,15 +108,15 @@ func formatValidationErrors(err error) map[string]string {
 
 		switch tag {
 		case "required":
-			message = "This field is required."
+			message = fmt.Sprintf("%s is required.", field)
 		case "max":
-			message = "This field exceeds the maximum allowed length."
+			message = fmt.Sprintf("%s exceeds the maximum allowed length.", field)
 		case "min":
-			message = "This field is below the minimum required length."
+			message = fmt.Sprintf("%s is below the minimum required length.", field)
 		case "email":
-			message = "Invalid email address format."
+			message = fmt.Sprintf("%s is not a valid email address.", field)
 		default:
-			message = "Invalid value."
+			message = fmt.Sprintf("%s has an invalid value.", field)
 		}
 
 		errors[field] = message
