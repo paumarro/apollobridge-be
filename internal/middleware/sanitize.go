@@ -22,8 +22,8 @@ func Sanitize() gin.HandlerFunc {
 		// Sanitize query parameters
 		query := c.Request.URL.Query()
 		for key, values := range query {
-			for _, value := range values {
-				query.Set(key, sanitizeString(value))
+			for i, value := range values {
+				query[key][i] = sanitizeString(value)
 			}
 		}
 		c.Request.URL.RawQuery = query.Encode()
@@ -62,13 +62,12 @@ func sanitizeString(input string) string {
 	// Trim whitespace
 	trimmed := strings.TrimSpace(input)
 
-	// Escape HTML entities (e.g., < becomes &lt;, > becomes &gt;)
-	escaped := html.EscapeString(trimmed)
-
 	// Strip HTML tags
-	stripped := stripHTMLTags(escaped)
+	stripped := stripHTMLTags(trimmed)
 
-	return stripped
+	// Escape HTML entities (e.g., < becomes &lt;, > becomes &gt;)
+	escaped := html.EscapeString(stripped)
+	return escaped
 }
 
 // stripHTMLTags removes HTML tags using a regular expression
