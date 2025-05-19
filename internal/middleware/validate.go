@@ -95,7 +95,7 @@ func validateRequestBody(c *gin.Context) map[string]string {
 // isSafeString validates a string using a whitelist approach
 func isSafeString(input string) bool {
 	// Allow alphanumeric characters, spaces, and a few safe symbols
-	allowed := regexp.MustCompile(`^[a-zA-Z0-9\s\-_.,@!]*$`)
+	allowed := regexp.MustCompile(`^[a-zA-Z0-9\s\-_.,@!\/]*$`)
 	return allowed.MatchString(input)
 }
 
