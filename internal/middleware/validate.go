@@ -2,11 +2,13 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
+	"regexp"
+
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/paumarro/apollo-be/internal/dto"
-	"net/http"
-	"regexp"
 )
 
 // Validator instance
@@ -51,10 +53,15 @@ func validateQueryParams(c *gin.Context) error {
 			return fmt.Errorf("query parameter key '%s' is too long", key)
 		}
 		for _, value := range values {
-			if len(value) > 255 {
+			decodedValue, err := url.QueryUnescape(value)
+			if err != nil {
+				return fmt.Errorf("failed to decode query parameter '%s'", key)
+			}
+
+			if len(decodedValue) > 255 {
 				return fmt.Errorf("query parameter value for key '%s' is too long", key)
 			}
-			if !isSafeString(value) {
+			if !isSafeString(decodedValue) {
 				return fmt.Errorf("query parameter value for key '%s' contains invalid characters", key)
 			}
 		}
