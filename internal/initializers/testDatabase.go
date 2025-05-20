@@ -1,6 +1,7 @@
 package initializers
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -8,12 +9,20 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
+var TestDB *gorm.DB
 
-func ConnectToDB() {
-	// Retrieve the DSN (Data Source Name) from the environment variable
-	dsn := os.Getenv("ART_DB_URL")
-	log.Println(dsn)
+func ConnectToTestDB() {
+	// Build the DSN from environment variables
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		os.Getenv("PG_TEST_USER"),
+		os.Getenv("PG_TEST_PASSWORD"),
+		os.Getenv("PG_TEST_HOST"),
+		os.Getenv("PG_TEST_PORT"),
+		os.Getenv("PG_TEST_DB"),
+	)
+
+	log.Println("Connecting to test database with DSN:", dsn)
 
 	// Attempt to establish the connection to the database
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -22,11 +31,11 @@ func ConnectToDB() {
 	}
 
 	// Assign the connection to the global DB variable
-	DB = db
+	TestDB = db
 
 	// Test the connection by running a simple query
 	var result int
-	if err := DB.Raw("SELECT 1").Scan(&result).Error; err != nil {
+	if err := TestDB.Raw("SELECT 1").Scan(&result).Error; err != nil {
 		log.Fatalf("Error executing test query: %v", err)
 	}
 
