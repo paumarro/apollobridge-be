@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/paumarro/apollo-be/internal/controllers"
@@ -10,11 +9,9 @@ import (
 	"github.com/paumarro/apollo-be/internal/middleware"
 	"github.com/paumarro/apollo-be/internal/models"
 	"github.com/paumarro/apollo-be/internal/services"
-	env "github.com/paumarro/apollo-be/pkg"
 )
 
 func init() {
-	env.LoadEnvVariables()
 	initializers.ConnectToDB()
 	if err := initializers.DB.AutoMigrate(&models.Artwork{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
@@ -24,7 +21,7 @@ func init() {
 func main() {
 	r := gin.Default()
 
-	clientID := os.Getenv("KEYCLOAK_CLIENT_ID")
+	// clientID := os.Getenv("KEYCLOAK_CLIENT_ID")
 
 	r.Use(middleware.RateLimit())
 	r.Use(middleware.SecurityHeaders())
@@ -34,7 +31,7 @@ func main() {
 	artworkController := controllers.NewArtworkController(artworkService)
 
 	galleryGroup := r.Group("/gallery")
-	galleryGroup.Use(middleware.Auth("Gallery", clientID))
+	// galleryGroup.Use(middleware.Auth("Gallery", clientID))
 	galleryGroup.Use(middleware.Sanitize())
 	galleryGroup.Use(middleware.Validate())
 
@@ -43,7 +40,7 @@ func main() {
 	galleryGroup.DELETE("/artworks/:id", artworkController.Delete)
 
 	regularGroup := r.Group("/")
-	regularGroup.Use(middleware.Auth("Regular", clientID))
+	// regularGroup.Use(middleware.Auth("Regular", clientID))
 	regularGroup.Use(middleware.Sanitize())
 	regularGroup.Use(middleware.Validate())
 
