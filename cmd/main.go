@@ -9,9 +9,11 @@ import (
 	"github.com/paumarro/apollo-be/internal/middleware"
 	"github.com/paumarro/apollo-be/internal/models"
 	"github.com/paumarro/apollo-be/internal/services"
+	env "github.com/paumarro/apollo-be/pkg"
 )
 
 func init() {
+	env.LoadEnvVariables()
 	initializers.ConnectToDB()
 	if err := initializers.DB.AutoMigrate(&models.Artwork{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

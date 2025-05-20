@@ -6,6 +6,7 @@ services:
       - "3000:3000"
     environment:
       ART_DB_URL: ${ART_DB_URL}
+      RUNNING_IN_DOCKER: "true" 
     env_file:
       - .env.docker 
     depends_on:
