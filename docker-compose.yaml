@@ -6,10 +6,13 @@ services:
       - "3000:3000"
     environment:
       ART_DB_URL: ${ART_DB_URL}
+    env_file:
+      - .env.docker 
     depends_on:
       - db
     networks:
       - apollo-net
+
 
   db:
     image: postgres:latest
