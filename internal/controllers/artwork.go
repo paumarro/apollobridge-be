@@ -6,26 +6,36 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/paumarro/apollo-be/internal/dto"
-	initializers "github.com/paumarro/apollo-be/internal/initializers"
 	"github.com/paumarro/apollo-be/internal/models"
-	"gorm.io/gorm"
+	"github.com/paumarro/apollo-be/internal/services"
 )
 
-// Define the struct with validation tags
-func respondWithError(c *gin.Context, code int, message string, details interface{}) {
-	log.Printf("Error: %s, Details: %v", message, details) // Log the full error for debugging
-	c.JSON(code, gin.H{"error": message})                  // Send a user-friendly error message
+// ArtworkController handles artwork-related operations
+type ArtworkController struct {
+	ArtworkService *services.ArtworkService
 }
 
-func ArtworkCreate(c *gin.Context) {
+// NewArtworkController creates a new instance of ArtworkController
+func NewArtworkController(service *services.ArtworkService) *ArtworkController {
+	return &ArtworkController{ArtworkService: service}
+}
+
+// RespondWithError is a helper function to send error responses
+func respondWithError(c *gin.Context, code int, message string, details interface{}) {
+	log.Printf("Error: %s, Details: %v", message, details)
+	c.JSON(code, gin.H{"error": message})
+}
+
+// ArtworkCreate handles the creation of a new artwork
+func (ac *ArtworkController) Create(c *gin.Context) {
 	sanitizedArtwork, exists := c.Get("sanitizedArtwork")
 	if !exists {
-		c.JSON(500, gin.H{"error": "Failed to retrieve sanitized input"})
+		log.Println("Sanitized artwork not found in context")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve sanitized input"})
 		return
 	}
 
 	req := sanitizedArtwork.(dto.ArtworkRequest)
-
 	artwork := models.Artwork{
 		Title:       req.Title,
 		Artist:      req.Artist,
@@ -33,8 +43,8 @@ func ArtworkCreate(c *gin.Context) {
 		Image:       req.Image,
 	}
 
-	if result := initializers.DB.Create(&artwork); result.Error != nil {
-		log.Printf("Error creating artwork: %v", result.Error)
+	if err := ac.ArtworkService.CreateArtwork(&artwork); err != nil {
+		log.Printf("Error creating artwork: %v", err)
 		respondWithError(c, http.StatusInternalServerError, "Failed to create artwork", nil)
 		return
 	}
@@ -42,10 +52,11 @@ func ArtworkCreate(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"artwork": artwork})
 }
 
-func ArtworkIndex(c *gin.Context) {
-	var artworks []models.Artwork
-	if result := initializers.DB.Find(&artworks); result.Error != nil {
-		log.Printf("Error fetching artworks: %v", result.Error)
+// ArtworkIndex handles fetching all artworks
+func (ac *ArtworkController) Index(c *gin.Context) {
+	artworks, err := ac.ArtworkService.GetAllArtworks()
+	if err != nil {
+		log.Printf("Error fetching artworks: %v", err)
 		respondWithError(c, http.StatusInternalServerError, "Failed to fetch artworks", nil)
 		return
 	}
@@ -53,29 +64,13 @@ func ArtworkIndex(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"artworks": artworks})
 }
 
-func ArtworkFind(c *gin.Context) {
+// ArtworkFind handles fetching a single artwork by ID
+func (ac *ArtworkController) Find(c *gin.Context) {
 	id := c.Param("id")
 
-	var artwork models.Artwork
-	result := initializers.DB.First(&artwork, id)
-
-	if result.Error != nil {
-		log.Printf("Error finding artwork: %v", result.Error)
-		respondWithError(c, http.StatusInternalServerError, "Failed to find artwork", nil)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"artwork": artwork})
-}
-
-func ArtworkUpdate(c *gin.Context) {
-	// Retrieve the artwork ID from the path parameters
-	id := c.Param("id")
-
-	// Fetch the existing artwork from the database
-	var artwork models.Artwork
-	if err := initializers.DB.First(&artwork, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	artwork, err := ac.ArtworkService.GetArtworkByID(id)
+	if err != nil {
+		if err.Error() == "record not found" {
 			respondWithError(c, http.StatusNotFound, "Artwork not found", nil)
 		} else {
 			log.Printf("Error finding artwork: %v", err)
@@ -84,48 +79,56 @@ func ArtworkUpdate(c *gin.Context) {
 		return
 	}
 
-	// Retrieve the sanitized and validated input from the middleware
+	c.JSON(http.StatusOK, gin.H{"artwork": artwork})
+}
+
+// ArtworkUpdate handles updating an artwork
+func (ac *ArtworkController) Update(c *gin.Context) {
+	id := c.Param("id")
+
+	artwork, err := ac.ArtworkService.GetArtworkByID(id)
+	if err != nil {
+		if err.Error() == "record not found" {
+			respondWithError(c, http.StatusNotFound, "Artwork not found", nil)
+		} else {
+			log.Printf("Error finding artwork: %v", err)
+			respondWithError(c, http.StatusInternalServerError, "Failed to find artwork", nil)
+		}
+		return
+	}
+
 	sanitizedArtwork, exists := c.Get("sanitizedArtwork")
 	if !exists {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve sanitized input"})
 		return
 	}
-	req := sanitizedArtwork.(dto.ArtworkRequest)
 
-	// Update the artwork fields with the sanitized input
+	req := sanitizedArtwork.(dto.ArtworkRequest)
 	artwork.Title = req.Title
 	artwork.Artist = req.Artist
 	artwork.Description = req.Description
 	artwork.Image = req.Image
 
-	// Save the updated artwork to the database
-	if err := initializers.DB.Save(&artwork).Error; err != nil {
+	if err := ac.ArtworkService.UpdateArtwork(artwork); err != nil {
 		log.Printf("Error updating artwork: %v", err)
 		respondWithError(c, http.StatusInternalServerError, "Failed to update artwork", nil)
 		return
 	}
 
-	// Respond with the updated artwork
 	c.JSON(http.StatusOK, gin.H{"artwork": artwork})
 }
 
-func ArtworkDelete(c *gin.Context) {
+// ArtworkDelete handles deleting an artwork
+func (ac *ArtworkController) Delete(c *gin.Context) {
 	id := c.Param("id")
 
-	var artwork models.Artwork
-	if err := initializers.DB.First(&artwork, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	if err := ac.ArtworkService.DeleteArtwork(id); err != nil {
+		if err.Error() == "record not found" {
 			respondWithError(c, http.StatusNotFound, "Artwork not found", nil)
 		} else {
-			log.Printf("Error finding artwork: %v", err)
-			respondWithError(c, http.StatusInternalServerError, "Failed to find artwork", nil)
+			log.Printf("Error deleting artwork: %v", err)
+			respondWithError(c, http.StatusInternalServerError, "Failed to delete artwork", nil)
 		}
-		return
-	}
-
-	if err := initializers.DB.Delete(&artwork).Error; err != nil {
-		log.Printf("Error deleting artwork: %v", err)
-		respondWithError(c, http.StatusInternalServerError, "Failed to delete artwork", nil)
 		return
 	}
 
