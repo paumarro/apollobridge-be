@@ -9,6 +9,7 @@ import (
 	"github.com/paumarro/apollo-be/internal/initializers"
 	"github.com/paumarro/apollo-be/internal/middleware"
 	"github.com/paumarro/apollo-be/internal/models"
+	"github.com/paumarro/apollo-be/internal/services"
 	env "github.com/paumarro/apollo-be/pkg"
 )
 
@@ -28,22 +29,26 @@ func main() {
 	r.Use(middleware.RateLimit())
 	r.Use(middleware.SecurityHeaders())
 
+	// Instantiate the service and controller
+	artworkService := services.NewArtworkService(initializers.DB)
+	artworkController := controllers.NewArtworkController(artworkService)
+
 	galleryGroup := r.Group("/gallery")
 	galleryGroup.Use(middleware.Auth("Gallery", clientID))
 	galleryGroup.Use(middleware.Sanitize())
 	galleryGroup.Use(middleware.Validate())
 
-	galleryGroup.POST("/artworks", controllers.ArtworkCreate)
-	galleryGroup.PUT("/artworks/:id", controllers.ArtworkUpdate)
-	galleryGroup.DELETE("/artworks/:id", controllers.ArtworkDelete)
+	galleryGroup.POST("/artworks", artworkController.Create)
+	galleryGroup.PUT("/artworks/:id", artworkController.Update)
+	galleryGroup.DELETE("/artworks/:id", artworkController.Delete)
 
 	regularGroup := r.Group("/")
 	regularGroup.Use(middleware.Auth("Regular", clientID))
 	regularGroup.Use(middleware.Sanitize())
 	regularGroup.Use(middleware.Validate())
 
-	regularGroup.GET("/artworks", controllers.ArtworkIndex)
-	regularGroup.GET("/artworks/:id", controllers.ArtworkFind)
+	regularGroup.GET("/artworks", artworkController.Index)
+	regularGroup.GET("/artworks/:id", artworkController.Find)
 
 	r.GET("/auth/callback", middleware.Sanitize(), middleware.Validate(), controllers.AuthCallback)
 
