@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	env.LoadEnvVariables()
+	env.LoadEnvVariables(".env")
 	initializers.ConnectToDB()
 	if err := initializers.DB.AutoMigrate(&models.Artwork{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
