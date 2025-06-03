@@ -7,28 +7,26 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func LoadEnvVariables() {
+func LoadEnvVariables(envFile string) {
+	log.Println("Loading environment variables...")
+
+	// Check if running in a production environment (Railway or other PaaS)
+	if os.Getenv("RAILWAY_ENVIRONMENT") != "" {
+		log.Println("Running in production environment. Skipping .env file loading.")
+		return
+	}
+
 	// Check if running in a Docker container
 	if os.Getenv("RUNNING_IN_DOCKER") == "true" {
-		log.Println("Running inside Docker container. Skipping LoadEnvVariables.")
+		log.Println("Running inside Docker container. Skipping .env file loading.")
 		return
 	}
 
 	// Load .env file
-	err := godotenv.Load()
+	err := godotenv.Load(envFile)
 	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Fatalf("Error loading %s file: %v", envFile, err)
 	}
 
-	port := os.Getenv("PORT")
-	keycloakURL := os.Getenv("KEYCLOAK_URL")
-	artDbURL := os.Getenv("ART_DB_URL")
-
-	// Example of error handling for critical variables
-	if port == "" || artDbURL == "" || keycloakURL == "" {
-		log.Fatalf("Error: Critical environment variables are not set")
-	}
-
-	// Log the successful loading of environment variables
 	log.Println("Environment variables loaded successfully!")
 }
