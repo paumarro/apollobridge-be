@@ -1,6 +1,7 @@
 # **Thread Model**
 
-![Thread Model](https://github.com/user-attachments/assets/48a9a72c-fe28-4e86-8166-88595280a2b8)
+<img width="1651" height="962" alt="Screenshot 2025-07-24 at 19 36 41" src="https://github.com/user-attachments/assets/1fbf84ff-aedd-4524-9d4c-9a86088ee53b" />
+
 
 ---
 
