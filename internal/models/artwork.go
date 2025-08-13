@@ -8,6 +8,7 @@ import (
 
 type Artwork struct {
 	gorm.Model
+	ID          uint
 	Title       string
 	Artist      string
 	Date        *time.Time
