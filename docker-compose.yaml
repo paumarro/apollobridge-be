@@ -40,6 +40,16 @@ services:
       - keycloak-data:/opt/keycloak/data
     networks:
       - apollo-net
+  test-runner:
+    build: .
+    command: ["go", "test", "./internal/test/integration_test/database_test.go"]
+    environment:
+      ART_DB_URL: ${ART_DB_URL}
+      RUNNING_IN_DOCKER: "true"
+    depends_on:
+      - db
+    networks:
+      - apollo-net
 
 networks:
   apollo-net:
