@@ -2,37 +2,33 @@ package services
 
 import (
 	"github.com/paumarro/apollo-be/internal/models"
-	"gorm.io/gorm"
+	"github.com/paumarro/apollo-be/internal/repositories"
 )
 
 type ArtworkService struct {
-	DB *gorm.DB
+	Repo repositories.ArtworkRepository
 }
 
-func NewArtworkService(db *gorm.DB) *ArtworkService {
-	return &ArtworkService{DB: db}
+func NewArtworkService(repo repositories.ArtworkRepository) *ArtworkService {
+	return &ArtworkService{Repo: repo}
 }
 
 func (s *ArtworkService) CreateArtwork(artwork *models.Artwork) error {
-	return s.DB.Create(artwork).Error
+	return s.Repo.Create(artwork)
 }
 
 func (s *ArtworkService) GetAllArtworks() ([]models.Artwork, error) {
-	var artworks []models.Artwork
-	err := s.DB.Find(&artworks).Error
-	return artworks, err
+	return s.Repo.FindAll()
 }
 
 func (s *ArtworkService) GetArtworkByID(id string) (*models.Artwork, error) {
-	var artwork models.Artwork
-	err := s.DB.First(&artwork, id).Error
-	return &artwork, err
+	return s.Repo.FindByID(id)
 }
 
 func (s *ArtworkService) UpdateArtwork(artwork *models.Artwork) error {
-	return s.DB.Save(artwork).Error
+	return s.Repo.Update(artwork)
 }
 
 func (s *ArtworkService) DeleteArtwork(id string) error {
-	return s.DB.Delete(&models.Artwork{}, id).Error
+	return s.Repo.Delete(id)
 }
