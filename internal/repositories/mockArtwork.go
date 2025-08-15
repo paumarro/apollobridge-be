@@ -16,12 +16,20 @@ func (m *MockArtworkRepository) Create(artwork *models.Artwork) error {
 
 func (m *MockArtworkRepository) FindAll() ([]models.Artwork, error) {
 	args := m.Called()
-	return args.Get(0).([]models.Artwork), args.Error(1)
+	var res []models.Artwork
+	if v := args.Get(0); v != nil {
+		res = v.([]models.Artwork)
+	}
+	return res, args.Error(1)
 }
 
 func (m *MockArtworkRepository) FindByID(id string) (*models.Artwork, error) {
 	args := m.Called(id)
-	return args.Get(0).(*models.Artwork), args.Error(1)
+	var res *models.Artwork
+	if v := args.Get(0); v != nil {
+		res = v.(*models.Artwork)
+	}
+	return res, args.Error(1)
 }
 
 func (m *MockArtworkRepository) Update(artwork *models.Artwork) error {

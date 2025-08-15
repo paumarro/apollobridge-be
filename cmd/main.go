@@ -22,6 +22,7 @@ func init() {
 }
 
 func main() {
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
 	// clientID := os.Getenv("KEYCLOAK_CLIENT_ID")

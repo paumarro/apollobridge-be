@@ -1,7 +1,9 @@
 package unit_test
 
 import (
+	"bytes"
 	"errors"
+	"log"
 	"testing"
 
 	"github.com/paumarro/apollo-be/internal/models"
@@ -10,11 +12,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func setUpMockServiceWithLogger() (*repositories.MockArtworkRepository, *services.ArtworkService, *bytes.Buffer) {
+	mockRepo := &repositories.MockArtworkRepository{}
+	logBuffer := new(bytes.Buffer) // Buffer to capture logs
+	log.SetOutput(logBuffer)       // Redirect logs to the buffer
+	service := services.NewArtworkService(mockRepo)
+	return mockRepo, service, logBuffer
+}
+
 func TestGetAllArtworks(t *testing.T) {
 	t.Run("EmptyResult", func(t *testing.T) {
 		// Arrange
-		mockRepo := new(repositories.MockArtworkRepository)
-		service := services.NewArtworkService(mockRepo)
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
 		mockRepo.On("FindAll").Return([]models.Artwork{}, nil)
 
@@ -25,12 +34,12 @@ func TestGetAllArtworks(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Empty(t, artworks)
 		mockRepo.AssertCalled(t, "FindAll")
+		assert.Contains(t, logBuffer.String(), "Fetching all artworks")
 	})
 
 	t.Run("NonEmptyResult", func(t *testing.T) {
 		// Arrange
-		mockRepo := new(repositories.MockArtworkRepository)
-		service := services.NewArtworkService(mockRepo)
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
 		expectedArtworks := []models.Artwork{
 			{ID: 1, Title: "Artwork 1", Artist: "Artist 1"},
@@ -46,12 +55,12 @@ func TestGetAllArtworks(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expectedArtworks, artworks)
 		mockRepo.AssertCalled(t, "FindAll")
+		assert.Contains(t, logBuffer.String(), "Fetching all artworks")
 	})
 
 	t.Run("DatabaseError", func(t *testing.T) {
 		// Arrange
-		mockRepo := new(repositories.MockArtworkRepository)
-		service := services.NewArtworkService(mockRepo)
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
 		mockRepo.On("FindAll").Return(nil, errors.New("database error"))
 
@@ -61,18 +70,18 @@ func TestGetAllArtworks(t *testing.T) {
 		// Assert
 		assert.Error(t, err)
 		assert.Nil(t, artworks)
-		assert.Equal(t, "database error", err.Error())
+		assert.Contains(t, err.Error(), "database error")
 		mockRepo.AssertCalled(t, "FindAll")
+		assert.Contains(t, logBuffer.String(), "Fetching all artworks")
 	})
 }
 
 func TestGetArtworkByID(t *testing.T) {
 	t.Run("NotFound", func(t *testing.T) {
 		// Arrange
-		mockRepo := new(repositories.MockArtworkRepository)
-		service := services.NewArtworkService(mockRepo)
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
-		mockRepo.On("FindByID", "invalid-id").Return(nil, errors.New("record not found"))
+		mockRepo.On("FindByID", "invalid-id").Return(nil, services.ErrNotFound)
 
 		// Act
 		artwork, err := service.GetArtworkByID("invalid-id")
@@ -80,14 +89,14 @@ func TestGetArtworkByID(t *testing.T) {
 		// Assert
 		assert.Error(t, err)
 		assert.Nil(t, artwork)
-		assert.Equal(t, "record not found", err.Error())
+		assert.True(t, errors.Is(err, services.ErrNotFound), "expected ErrNotFound error")
 		mockRepo.AssertCalled(t, "FindByID", "invalid-id")
+		assert.Contains(t, logBuffer.String(), "Fetching artwork with ID: invalid-id")
 	})
 
 	t.Run("Found", func(t *testing.T) {
 		// Arrange
-		mockRepo := new(repositories.MockArtworkRepository)
-		service := services.NewArtworkService(mockRepo)
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
 		expectedArtwork := &models.Artwork{ID: 1, Title: "Artwork 1", Artist: "Artist 1"}
 
@@ -100,14 +109,14 @@ func TestGetArtworkByID(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expectedArtwork, artwork)
 		mockRepo.AssertCalled(t, "FindByID", "1")
+		assert.Contains(t, logBuffer.String(), "Fetching artwork with ID: 1")
 	})
 }
 
 func TestCreateArtwork(t *testing.T) {
 	t.Run("InvalidData", func(t *testing.T) {
 		// Arrange
-		mockRepo := new(repositories.MockArtworkRepository)
-		service := services.NewArtworkService(mockRepo)
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
 		invalidArtwork := &models.Artwork{Title: ""} // Title is required
 		mockRepo.On("Create", invalidArtwork).Return(errors.New("validation error"))
@@ -117,14 +126,15 @@ func TestCreateArtwork(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		assert.Equal(t, "validation error", err.Error())
+		assert.Contains(t, err.Error(), "validation error")
 		mockRepo.AssertCalled(t, "Create", invalidArtwork)
+		assert.Contains(t, logBuffer.String(), "Creating artwork:")
+		assert.Contains(t, logBuffer.String(), "Error in CreateArtwork: validation error")
 	})
 
 	t.Run("Success", func(t *testing.T) {
 		// Arrange
-		mockRepo := new(repositories.MockArtworkRepository)
-		service := services.NewArtworkService(mockRepo)
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
 		validArtwork := &models.Artwork{Title: "Valid Title", Artist: "Valid Artist"}
 		mockRepo.On("Create", validArtwork).Return(nil)
@@ -135,14 +145,14 @@ func TestCreateArtwork(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		mockRepo.AssertCalled(t, "Create", validArtwork)
+		assert.Contains(t, logBuffer.String(), "Creating artwork:")
 	})
 }
 
 func TestDeleteArtwork(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		// Arrange
-		mockRepo := new(repositories.MockArtworkRepository)
-		service := services.NewArtworkService(mockRepo)
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
 		mockRepo.On("Delete", "valid-id").Return(nil)
 
@@ -152,28 +162,28 @@ func TestDeleteArtwork(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		mockRepo.AssertCalled(t, "Delete", "valid-id")
+		assert.Contains(t, logBuffer.String(), "Deleting artwork with ID: valid-id")
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
 		// Arrange
-		mockRepo := new(repositories.MockArtworkRepository)
-		service := services.NewArtworkService(mockRepo)
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
-		mockRepo.On("Delete", "invalid-id").Return(errors.New("record not found"))
+		mockRepo.On("Delete", "invalid-id").Return(services.ErrNotFound)
 
 		// Act
 		err := service.DeleteArtwork("invalid-id")
 
 		// Assert
 		assert.Error(t, err)
-		assert.Equal(t, "record not found", err.Error())
+		assert.True(t, errors.Is(err, services.ErrNotFound), "expected ErrNotFound error")
 		mockRepo.AssertCalled(t, "Delete", "invalid-id")
+		assert.Contains(t, logBuffer.String(), "Deleting artwork with ID: invalid-id")
 	})
 
 	t.Run("DatabaseError", func(t *testing.T) {
 		// Arrange
-		mockRepo := new(repositories.MockArtworkRepository)
-		service := services.NewArtworkService(mockRepo)
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
 		mockRepo.On("Delete", "valid-id").Return(errors.New("database error"))
 
@@ -182,7 +192,8 @@ func TestDeleteArtwork(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		assert.Equal(t, "database error", err.Error())
+		assert.Contains(t, err.Error(), "database error")
 		mockRepo.AssertCalled(t, "Delete", "valid-id")
+		assert.Contains(t, logBuffer.String(), "Deleting artwork with ID: valid-id")
 	})
 }
