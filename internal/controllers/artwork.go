@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
@@ -20,7 +21,7 @@ func NewArtworkController(service *services.ArtworkService) *ArtworkController {
 	return &ArtworkController{ArtworkService: service}
 }
 
-// RespondWithError is a helper function to send error responses
+// respondWithError is a helper function to send error responses
 func respondWithError(c *gin.Context, code int, message string, details interface{}) {
 	log.Printf("Error: %s, Details: %v", message, details)
 	c.JSON(code, gin.H{"error": message})
@@ -30,12 +31,15 @@ func respondWithError(c *gin.Context, code int, message string, details interfac
 func (ac *ArtworkController) Create(c *gin.Context) {
 	sanitizedArtwork, exists := c.Get("sanitizedArtwork")
 	if !exists {
-		log.Println("Sanitized artwork not found in context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve sanitized input"})
+		respondWithError(c, http.StatusInternalServerError, "Failed to retrieve sanitized input", nil)
 		return
 	}
 
-	req := sanitizedArtwork.(dto.ArtworkRequest)
+	req, ok := sanitizedArtwork.(dto.ArtworkRequest)
+	if !ok {
+		respondWithError(c, http.StatusInternalServerError, "Invalid sanitized input", nil)
+		return
+	}
 	artwork := models.Artwork{
 		Title:       req.Title,
 		Artist:      req.Artist,
@@ -44,37 +48,32 @@ func (ac *ArtworkController) Create(c *gin.Context) {
 	}
 
 	if err := ac.ArtworkService.CreateArtwork(&artwork); err != nil {
-		log.Printf("Error creating artwork: %v", err)
-		respondWithError(c, http.StatusInternalServerError, "Failed to create artwork", nil)
+		respondWithError(c, http.StatusInternalServerError, "Failed to create artwork", err)
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"artwork": artwork})
 }
 
-// ArtworkIndex handles fetching all artworks
 func (ac *ArtworkController) Index(c *gin.Context) {
 	artworks, err := ac.ArtworkService.GetAllArtworks()
 	if err != nil {
-		log.Printf("Error fetching artworks: %v", err)
-		respondWithError(c, http.StatusInternalServerError, "Failed to fetch artworks", nil)
+		respondWithError(c, http.StatusInternalServerError, "Failed to fetch artworks", err)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"artworks": artworks})
 }
 
-// ArtworkFind handles fetching a single artwork by ID
 func (ac *ArtworkController) Find(c *gin.Context) {
 	id := c.Param("id")
 
 	artwork, err := ac.ArtworkService.GetArtworkByID(id)
 	if err != nil {
-		if err.Error() == "record not found" {
+		if errors.Is(err, services.ErrNotFound) {
 			respondWithError(c, http.StatusNotFound, "Artwork not found", nil)
 		} else {
-			log.Printf("Error finding artwork: %v", err)
-			respondWithError(c, http.StatusInternalServerError, "Failed to find artwork", nil)
+			respondWithError(c, http.StatusInternalServerError, "Failed to find artwork", err)
 		}
 		return
 	}
@@ -86,9 +85,10 @@ func (ac *ArtworkController) Find(c *gin.Context) {
 func (ac *ArtworkController) Update(c *gin.Context) {
 	id := c.Param("id")
 
+	// Fetch the artwork by ID
 	artwork, err := ac.ArtworkService.GetArtworkByID(id)
 	if err != nil {
-		if err.Error() == "record not found" {
+		if errors.Is(err, services.ErrNotFound) {
 			respondWithError(c, http.StatusNotFound, "Artwork not found", nil)
 		} else {
 			log.Printf("Error finding artwork: %v", err)
@@ -97,18 +97,21 @@ func (ac *ArtworkController) Update(c *gin.Context) {
 		return
 	}
 
+	// Retrieve sanitized input
 	sanitizedArtwork, exists := c.Get("sanitizedArtwork")
 	if !exists {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve sanitized input"})
+		respondWithError(c, http.StatusInternalServerError, "Failed to retrieve sanitized input", nil)
 		return
 	}
 
+	// Update the artwork fields
 	req := sanitizedArtwork.(dto.ArtworkRequest)
 	artwork.Title = req.Title
 	artwork.Artist = req.Artist
 	artwork.Description = req.Description
 	artwork.Image = req.Image
 
+	// Attempt to update the artwork
 	if err := ac.ArtworkService.UpdateArtwork(artwork); err != nil {
 		log.Printf("Error updating artwork: %v", err)
 		respondWithError(c, http.StatusInternalServerError, "Failed to update artwork", nil)
@@ -118,16 +121,14 @@ func (ac *ArtworkController) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"artwork": artwork})
 }
 
-// ArtworkDelete handles deleting an artwork
 func (ac *ArtworkController) Delete(c *gin.Context) {
 	id := c.Param("id")
 
 	if err := ac.ArtworkService.DeleteArtwork(id); err != nil {
-		if err.Error() == "record not found" {
+		if errors.Is(err, services.ErrNotFound) {
 			respondWithError(c, http.StatusNotFound, "Artwork not found", nil)
 		} else {
-			log.Printf("Error deleting artwork: %v", err)
-			respondWithError(c, http.StatusInternalServerError, "Failed to delete artwork", nil)
+			respondWithError(c, http.StatusInternalServerError, "Failed to delete artwork", err)
 		}
 		return
 	}
