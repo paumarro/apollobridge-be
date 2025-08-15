@@ -1,338 +1,367 @@
-package controllers
+package unit_test
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"testing"
-	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
 	"github.com/paumarro/apollo-be/internal/controllers"
 	"github.com/paumarro/apollo-be/internal/dto"
-	"github.com/paumarro/apollo-be/internal/initializers"
+	"github.com/paumarro/apollo-be/internal/models"
+	"github.com/paumarro/apollo-be/internal/repositories"
+	"github.com/paumarro/apollo-be/internal/services"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/stretchr/testify/mock"
 )
 
-func setupTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("Failed to create mock DB: %v", err)
-	}
-
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{
-		Conn: db,
-	}), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to open GORM DB: %v", err)
-	}
-
-	initializers.DB = gormDB
-	return gormDB, mock
+// SetupMockController initializes a mock repository and returns an ArtworkController instance.
+func setupMockController() (*repositories.MockArtworkRepository, *controllers.ArtworkController) {
+	mockRepo := &repositories.MockArtworkRepository{}
+	artworkService := services.NewArtworkService(mockRepo)
+	artworkController := controllers.NewArtworkController(artworkService)
+	return mockRepo, artworkController
 }
 
 func TestArtworkCreate(t *testing.T) {
-	_, mock := setupTestDB(t)
-
 	t.Run("Successful Creation", func(t *testing.T) {
-		mock.ExpectBegin()
-		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "artworks"`)).
-			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "Test Artwork", "Test Artist", sqlmock.AnyArg(), "Test Description", "http://test.com/image.jpg").
-			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-		mock.ExpectCommit()
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		gin.SetMode(gin.TestMode)
+		// Configure the mock to return no error
+		mockRepo.On("Create", mock.AnythingOfType("*models.Artwork")).Return(nil)
+
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		artwork := dto.ArtworkRequest{
+		// Set the sanitizedArtwork in the Gin context
+		c.Set("sanitizedArtwork", dto.ArtworkRequest{
 			Title:       "Test Artwork",
 			Artist:      "Test Artist",
 			Description: "Test Description",
 			Image:       "http://test.com/image.jpg",
-		}
+		})
 
-		c.Set("sanitizedArtwork", artwork)
-		controllers.ArtworkCreate(c)
+		// Call the controller
+		ac.Create(c)
 
+		// Assert that the response is 201 Created
 		assert.Equal(t, http.StatusCreated, w.Code)
 		assert.Contains(t, w.Body.String(), "Test Artwork")
-	})
 
-	t.Run("Missing SanitizedArtwork", func(t *testing.T) {
-		gin.SetMode(gin.TestMode)
-		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-
-		controllers.ArtworkCreate(c)
-
-		assert.Equal(t, http.StatusInternalServerError, w.Code)
-		assert.Contains(t, w.Body.String(), "Failed to retrieve sanitized input")
+		// Verify the mock was called
+		mockRepo.AssertCalled(t, "Create", mock.AnythingOfType("*models.Artwork"))
 	})
 
 	t.Run("Database Error", func(t *testing.T) {
-		mock.ExpectBegin()
-		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "artworks"`)).
-			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "Test Artwork", "Test Artist", sqlmock.AnyArg(), "Test Description", "http://test.com/image.jpg").
-			WillReturnError(assert.AnError)
-		mock.ExpectRollback()
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		gin.SetMode(gin.TestMode)
+		// Configure the mock to return a database error
+		mockRepo.On("Create", mock.AnythingOfType("*models.Artwork")).Run(func(args mock.Arguments) {
+			fmt.Println("Mock Create called with:", args)
+		}).Return(errors.New("DB error"))
+
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		artwork := dto.ArtworkRequest{
+		// Set the sanitizedArtwork in the Gin context
+		c.Set("sanitizedArtwork", dto.ArtworkRequest{
 			Title:       "Test Artwork",
 			Artist:      "Test Artist",
 			Description: "Test Description",
 			Image:       "http://test.com/image.jpg",
-		}
+		})
 
-		c.Set("sanitizedArtwork", artwork)
-		controllers.ArtworkCreate(c)
+		// Call the controller
+		ac.Create(c)
 
+		// Assert that the response is 500 Internal Server Error
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Contains(t, w.Body.String(), "Failed to create artwork")
+
+		// Verify the mock was called
+		mockRepo.AssertCalled(t, "Create", mock.AnythingOfType("*models.Artwork"))
+	})
+
+	t.Run("Missing Sanitized Artwork in Context", func(t *testing.T) {
+		_, ac := setupMockController()
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		// Do not set "sanitizedArtwork" in the context
+
+		ac.Create(c)
+
+		// Assert that the response is 500 Internal Server Error
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Contains(t, w.Body.String(), "Failed to retrieve sanitized input")
 	})
 }
 
 func TestArtworkIndex(t *testing.T) {
-	_, mock := setupTestDB(t)
-
-	// Edge Case 1: Successful Fetch with Artworks
 	t.Run("Successful Fetch with Artworks", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{"id", "created_at", "updated_at", "deleted_at", "title", "artist", "date", "description", "image"}).
-			AddRow(1, time.Now(), time.Now(), nil, "Artwork 1", "Artist 1", time.Now(), "Description 1", "http://image1.jpg").
-			AddRow(2, time.Now(), time.Now(), nil, "Artwork 2", "Artist 2", time.Now(), "Description 2", "http://image2.jpg")
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "artworks" WHERE "artworks"."deleted_at" IS NULL`)).WillReturnRows(rows)
+		mockRepo.On("FindAll").Return([]models.Artwork{
+			{Title: "Artwork 1", Artist: "Artist 1"},
+			{Title: "Artwork 2", Artist: "Artist 2"},
+		}, nil)
 
-		gin.SetMode(gin.TestMode)
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		controllers.ArtworkIndex(c)
+		ac.Index(c)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Contains(t, w.Body.String(), "Artwork 1")
 		assert.Contains(t, w.Body.String(), "Artwork 2")
+
+		mockRepo.AssertCalled(t, "FindAll")
 	})
 
-	// Edge Case 2: Empty Database
 	t.Run("Empty Database", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{"id", "created_at", "updated_at", "deleted_at", "title", "artist", "date", "description", "image"})
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "artworks" WHERE "artworks"."deleted_at" IS NULL`)).WillReturnRows(rows)
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		gin.SetMode(gin.TestMode)
+		mockRepo.On("FindAll").Return([]models.Artwork{}, nil)
+
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		controllers.ArtworkIndex(c)
+		ac.Index(c)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Body.String(), `"artworks":[]`) // Ensure the response contains an empty array
+		assert.Contains(t, w.Body.String(), `"artworks":[]`)
+
+		mockRepo.AssertCalled(t, "FindAll")
 	})
 
-	// Edge Case 3: Database Error
 	t.Run("Database Error", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "artworks" WHERE "artworks"."deleted_at" IS NULL`)).
-			WillReturnError(assert.AnError)
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		gin.SetMode(gin.TestMode)
+		mockRepo.On("FindAll").Return([]models.Artwork{}, errors.New("DB error"))
+
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		controllers.ArtworkIndex(c)
+		ac.Index(c)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Contains(t, w.Body.String(), "Failed to fetch artworks")
+
+		mockRepo.AssertCalled(t, "FindAll")
 	})
-
-	// Edge Case 4: Large Dataset
-	t.Run("Large Dataset", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{"id", "created_at", "updated_at", "deleted_at", "title", "artist", "date", "description", "image"})
-		for i := 1; i <= 1000; i++ {
-			rows.AddRow(i, time.Now(), time.Now(), nil, fmt.Sprintf("Artwork %d", i), fmt.Sprintf("Artist %d", i), time.Now(), fmt.Sprintf("Description %d", i), fmt.Sprintf("http://image%d.jpg", i))
-		}
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "artworks" WHERE "artworks"."deleted_at" IS NULL`)).WillReturnRows(rows)
-
-		gin.SetMode(gin.TestMode)
-		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-
-		controllers.ArtworkIndex(c)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Body.String(), "Artwork 1")
-		assert.Contains(t, w.Body.String(), "Artwork 1000")
-	})
-
 }
 
 func TestArtworkFind(t *testing.T) {
-	_, mock := setupTestDB(t)
+	t.Run("Successful Retrieval", func(t *testing.T) {
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-	rows := sqlmock.NewRows([]string{"id", "created_at", "updated_at", "deleted_at", "title", "artist", "date", "description", "image"}).
-		AddRow(1, time.Now(), time.Now(), nil, "Artwork 1", "Artist 1", time.Now(), "Description 1", "http://image1.jpg")
+		mockRepo.On("FindByID", "1").Return(&models.Artwork{
+			Title:  "Artwork 1",
+			Artist: "Artist 1",
+		}, nil)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "artworks" WHERE "artworks"."id" = $1 AND "artworks"."deleted_at" IS NULL ORDER BY "artworks"."id" LIMIT $2`)).
-		WithArgs("1", 1).
-		WillReturnRows(rows)
-
-	gin.SetMode(gin.TestMode)
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Params = []gin.Param{{Key: "id", Value: "1"}}
-
-	controllers.ArtworkFind(c)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "Artwork 1")
-}
-
-func TestArtworkUpdate(t *testing.T) {
-	_, mock := setupTestDB(t)
-
-	// Edge Case 1: Successful Update
-	t.Run("Successful Update", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "artworks" WHERE "artworks"."id" = $1 AND "artworks"."deleted_at" IS NULL ORDER BY "artworks"."id" LIMIT $2`)).
-			WithArgs("1", 1).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at", "deleted_at", "title", "artist", "date", "description", "image"}).
-				AddRow(1, time.Now(), time.Now(), nil, "Old Title", "Old Artist", time.Now(), "Old Description", "http://old-image.jpg"))
-
-		mock.ExpectBegin()
-		mock.ExpectExec(regexp.QuoteMeta(`UPDATE "artworks" SET "created_at"=$1,"updated_at"=$2,"deleted_at"=$3,"title"=$4,"artist"=$5,"date"=$6,"description"=$7,"image"=$8 WHERE "artworks"."deleted_at" IS NULL AND "id" = $9`)).
-			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "Updated Title", "Updated Artist", sqlmock.AnyArg(), "Updated Description", "http://updated-image.jpg", 1).
-			WillReturnResult(sqlmock.NewResult(1, 1))
-		mock.ExpectCommit()
-
-		gin.SetMode(gin.TestMode)
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 		c.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		updatedArtwork := dto.ArtworkRequest{
-			Title:       "Updated Title",
-			Artist:      "Updated Artist",
-			Description: "Updated Description",
-			Image:       "http://updated-image.jpg",
-		}
-
-		c.Set("sanitizedArtwork", updatedArtwork)
-
-		controllers.ArtworkUpdate(c)
+		ac.Find(c)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Body.String(), "Updated Title")
+		assert.Contains(t, w.Body.String(), "Artwork 1")
+
+		mockRepo.AssertCalled(t, "FindByID", "1")
 	})
 
-	// Edge Case 2: Artwork Not Found
 	t.Run("Artwork Not Found", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "artworks" WHERE "artworks"."id" = $1 AND "artworks"."deleted_at" IS NULL ORDER BY "artworks"."id" LIMIT $2`)).
-			WithArgs("999", 1).
-			WillReturnError(gorm.ErrRecordNotFound)
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		gin.SetMode(gin.TestMode)
+		mockRepo.On("FindByID", "1").Return(nil, services.ErrNotFound)
+
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Params = []gin.Param{{Key: "id", Value: "999"}}
+		c.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		controllers.ArtworkUpdate(c)
+		ac.Find(c)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
 		assert.Contains(t, w.Body.String(), "Artwork not found")
+
+		mockRepo.AssertCalled(t, "FindByID", "1")
 	})
+}
 
-	// Edge Case 3: Missing SanitizedArtwork Context
-	t.Run("Missing SanitizedArtwork Context", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "artworks" WHERE "artworks"."id" = $1 AND "artworks"."deleted_at" IS NULL ORDER BY "artworks"."id" LIMIT $2`)).
-			WithArgs("1", 1).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at", "deleted_at", "title", "artist", "date", "description", "image"}).
-				AddRow(1, time.Now(), time.Now(), nil, "Old Title", "Old Artist", time.Now(), "Old Description", "http://old-image.jpg"))
+func TestArtworkUpdate(t *testing.T) {
+	t.Run("Successful Update", func(t *testing.T) {
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		gin.SetMode(gin.TestMode)
+		// Mock the repository to return an existing artwork
+		mockRepo.On("FindByID", "1").Return(&models.Artwork{
+			ID:          1,
+			Title:       "Old Title",
+			Artist:      "Old Artist",
+			Description: "Old Description",
+			Image:       "http://oldimage.com",
+		}, nil)
+
+		// Mock the repository to update the artwork successfully
+		mockRepo.On("Update", mock.AnythingOfType("*models.Artwork")).Return(nil)
+
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+
+		// Set the ID parameter
 		c.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		controllers.ArtworkUpdate(c)
+		// Set the sanitizedArtwork in the Gin context
+		c.Set("sanitizedArtwork", dto.ArtworkRequest{
+			Title:       "New Title",
+			Artist:      "New Artist",
+			Description: "New Description",
+			Image:       "http://newimage.com",
+		})
 
+		// Call the controller
+		ac.Update(c)
+
+		// Assert that the response is 200 OK
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "New Title")
+		assert.Contains(t, w.Body.String(), "New Artist")
+
+		// Verify the mock was called
+		mockRepo.AssertCalled(t, "FindByID", "1")
+		mockRepo.AssertCalled(t, "Update", mock.AnythingOfType("*models.Artwork"))
+	})
+
+	t.Run("Artwork Not Found", func(t *testing.T) {
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
+
+		// Mock the repository to return not found
+		mockRepo.On("FindByID", "1").Return(nil, services.ErrNotFound)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		// Set the ID parameter
+		c.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+		// Call the controller
+		ac.Update(c)
+
+		// Assert that the response is 404 Not Found
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.Contains(t, w.Body.String(), "Artwork not found")
+
+		// Verify the mock was called
+		mockRepo.AssertCalled(t, "FindByID", "1")
+	})
+
+	t.Run("Missing Sanitized Input", func(t *testing.T) {
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
+
+		// Mock the repository to return an existing artwork
+		mockRepo.On("FindByID", "1").Return(&models.Artwork{
+			ID:          1,
+			Title:       "Old Title",
+			Artist:      "Old Artist",
+			Description: "Old Description",
+			Image:       "http://oldimage.com",
+		}, nil)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		// Set the ID parameter
+		c.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+		// Do not set sanitizedArtwork in the context
+		ac.Update(c)
+
+		// Assert that the response is 500 Internal Server Error
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Contains(t, w.Body.String(), "Failed to retrieve sanitized input")
+
+		// Verify the mock was called
+		mockRepo.AssertCalled(t, "FindByID", "1")
 	})
 
-	// Edge Case 4: Invalid ID Format
-	t.Run("Invalid ID Format", func(t *testing.T) {
-		gin.SetMode(gin.TestMode)
-		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-		c.Params = []gin.Param{{Key: "id", Value: "abc"}} // Invalid ID format
-
-		controllers.ArtworkUpdate(c)
-
-		assert.Equal(t, http.StatusInternalServerError, w.Code)
-		assert.Contains(t, w.Body.String(), "Failed to find artwork")
-	})
-
-	// Edge Case 5: Database Error During Update
 	t.Run("Database Error During Update", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "artworks" WHERE "artworks"."id" = $1 AND "artworks"."deleted_at" IS NULL ORDER BY "artworks"."id" LIMIT $2`)).
-			WithArgs("1", 1).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at", "deleted_at", "title", "artist", "date", "description", "image"}).
-				AddRow(1, time.Now(), time.Now(), nil, "Old Title", "Old Artist", time.Now(), "Old Description", "http://old-image.jpg"))
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		mock.ExpectBegin()
-		mock.ExpectExec(regexp.QuoteMeta(`UPDATE "artworks" SET "created_at"=$1,"updated_at"=$2,"deleted_at"=$3,"title"=$4,"artist"=$5,"date"=$6,"description"=$7,"image"=$8 WHERE "artworks"."deleted_at" IS NULL AND "id" = $9`)).
-			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "Updated Title", "Updated Artist", sqlmock.AnyArg(), "Updated Description", "http://updated-image.jpg", 1).
-			WillReturnError(assert.AnError)
-		mock.ExpectRollback()
+		// Mock the repository to return an existing artwork
+		mockRepo.On("FindByID", "1").Return(&models.Artwork{
+			ID:          1,
+			Title:       "Old Title",
+			Artist:      "Old Artist",
+			Description: "Old Description",
+			Image:       "http://oldimage.com",
+		}, nil)
 
-		gin.SetMode(gin.TestMode)
+		// Mock the repository to fail during the update
+		mockRepo.On("Update", mock.AnythingOfType("*models.Artwork")).Return(errors.New("DB error"))
+
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
+
+		// Set the ID parameter
 		c.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		updatedArtwork := dto.ArtworkRequest{
-			Title:       "Updated Title",
-			Artist:      "Updated Artist",
-			Description: "Updated Description",
-			Image:       "http://updated-image.jpg",
-		}
+		// Set the sanitizedArtwork in the Gin context
+		c.Set("sanitizedArtwork", dto.ArtworkRequest{
+			Title:       "New Title",
+			Artist:      "New Artist",
+			Description: "New Description",
+			Image:       "http://newimage.com",
+		})
 
-		c.Set("sanitizedArtwork", updatedArtwork)
+		// Call the controller
+		ac.Update(c)
 
-		controllers.ArtworkUpdate(c)
-
+		// Assert that the response is 500 Internal Server Error
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Contains(t, w.Body.String(), "Failed to update artwork")
+
+		// Verify the mock was called
+		mockRepo.AssertCalled(t, "FindByID", "1")
+		mockRepo.AssertCalled(t, "Update", mock.AnythingOfType("*models.Artwork"))
 	})
 }
 
 func TestArtworkDelete(t *testing.T) {
-	_, mock := setupTestDB(t)
+	t.Run("Successful Deletion", func(t *testing.T) {
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "artworks" WHERE "artworks"."id" = $1 AND "artworks"."deleted_at" IS NULL ORDER BY "artworks"."id" LIMIT $2`)).
-		WithArgs("1", 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at", "deleted_at", "title", "artist", "date", "description", "image"}).
-			AddRow(1, time.Now(), time.Now(), nil, "Artwork 1", "Artist 1", time.Now(), "Description 1", "http://image1.jpg"))
+		mockRepo.On("Delete", "1").Return(nil)
 
-	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "artworks" SET "deleted_at"=$1 WHERE "artworks"."id" = $2 AND "artworks"."deleted_at" IS NULL`)).
-		WithArgs(sqlmock.AnyArg(), 1).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-	gin.SetMode(gin.TestMode)
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Params = []gin.Param{{Key: "id", Value: "1"}}
+		ac.Delete(c)
 
-	controllers.ArtworkDelete(c)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "Artwork successfully deleted")
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "Artwork successfully deleted")
+		mockRepo.AssertCalled(t, "Delete", "1")
+	})
+
+	t.Run("Artwork Not Found", func(t *testing.T) {
+		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
+
+		mockRepo.On("Delete", "1").Return(services.ErrNotFound)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+		ac.Delete(c)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.Contains(t, w.Body.String(), "Artwork not found")
+
+		mockRepo.AssertCalled(t, "Delete", "1")
+	})
 }
