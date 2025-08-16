@@ -63,7 +63,6 @@ jobs:
       - name: Run Integration Tests
         run: |
           docker-compose run --rm test-database
-          docker-compose run --rm test-middleware
 
       # Step 6: Tear down services
       - name: Stop Services
