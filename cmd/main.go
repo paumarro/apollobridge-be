@@ -2,57 +2,63 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/paumarro/apollo-be/internal/controllers"
 	"github.com/paumarro/apollo-be/internal/initializers"
 	"github.com/paumarro/apollo-be/internal/middleware"
 	"github.com/paumarro/apollo-be/internal/models"
+	"github.com/paumarro/apollo-be/internal/repositories"
 	"github.com/paumarro/apollo-be/internal/services"
 	env "github.com/paumarro/apollo-be/pkg"
 )
 
 func init() {
-	env.LoadEnvVariables()
+	env.LoadEnvVariables(".env")
 	initializers.ConnectToDB()
+	log.Println("Starting database migration...")
 	if err := initializers.DB.AutoMigrate(&models.Artwork{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
+	log.Println("Database migration completed successfully.")
 }
 
 func main() {
-	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
 
-	clientID := os.Getenv("KEYCLOAK_CLIENT_ID")
+	// clientID := os.Getenv("KEYCLOAK_CLIENT_ID")
 
-	r.Use(middleware.RateLimit())
-	r.Use(middleware.SecurityHeaders())
+	router.Use(middleware.RateLimit())
+	router.Use(middleware.SecurityHeaders())
+	router.Use(middleware.Sanitize())
+	router.Use(middleware.Validate())
 
 	// Instantiate the service and controller
-	artworkService := services.NewArtworkService(initializers.DB)
-	artworkController := controllers.NewArtworkController(artworkService)
+	artworkRepo := repositories.NewGormArtworkRepository(initializers.DB) // GORM-based repository
+	artworkService := services.NewArtworkService(artworkRepo)             // Service depends on the repository interface
+	artworkController := controllers.NewArtworkController(artworkService) // Controller depends on the service
 
-	galleryGroup := r.Group("/gallery")
-	galleryGroup.Use(middleware.Auth("Gallery", clientID))
-	galleryGroup.Use(middleware.Sanitize())
-	galleryGroup.Use(middleware.Validate())
+	galleryGroup := router.Group("/gallery")
+	// galleryGroup.Use(middleware.Auth("Gallery", clientID))
+	// galleryGroup.Use(middleware.Sanitize())
+	// galleryGroup.Use(middleware.Validate())
 
 	galleryGroup.POST("/artworks", artworkController.Create)
 	galleryGroup.PUT("/artworks/:id", artworkController.Update)
 	galleryGroup.DELETE("/artworks/:id", artworkController.Delete)
 
-	regularGroup := r.Group("/")
-	regularGroup.Use(middleware.Auth("Regular", clientID))
-	regularGroup.Use(middleware.Sanitize())
-	regularGroup.Use(middleware.Validate())
+	regularGroup := router.Group("/")
+	// regularGroup.Use(middleware.Auth("Regular", clientID))
+	// regularGroup.Use(middleware.Sanitize())
+	// regularGroup.Use(middleware.Validate())
 
 	regularGroup.GET("/artworks", artworkController.Index)
 	regularGroup.GET("/artworks/:id", artworkController.Find)
 
-	r.GET("/auth/callback", middleware.Sanitize(), middleware.Validate(), controllers.AuthCallback)
+	router.GET("/auth/callback", middleware.Sanitize(), middleware.Validate(), controllers.AuthCallback)
 
-	if err := r.Run(); err != nil {
+	if err := router.Run(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
