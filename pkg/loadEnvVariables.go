@@ -11,7 +11,7 @@ func LoadEnvVariables(envFile string) {
 	log.Println("Loading environment variables...")
 
 	// Check if running in a production environment (Railway or other PaaS)
-	if os.Getenv("RAILWAY_ENVIRONMENT") != "true" {
+	if os.Getenv("RAILWAY_ENVIRONMENT") == "production" {
 		log.Println("Running in production environment. Skipping .env file loading.")
 		return
 	}

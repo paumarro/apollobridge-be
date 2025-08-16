@@ -8,10 +8,10 @@ import (
 
 type Artwork struct {
 	gorm.Model
-	ID          uint
-	Title       string
-	Artist      string
-	Date        *time.Time
-	Description string
-	Image       string
+	ID          uint       `json:"id"`
+	Title       string     `json:"title"`
+	Artist      string     `json:"artist"`
+	Date        *time.Time `json:"date,omitempty"`
+	Description string     `json:"description"`
+	Image       string     `json:"image"`
 }

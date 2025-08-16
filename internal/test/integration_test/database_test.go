@@ -16,6 +16,8 @@ import (
 	"github.com/paumarro/apollo-be/internal/dto"
 	"github.com/paumarro/apollo-be/internal/initializers"
 	"github.com/paumarro/apollo-be/internal/models"
+	"github.com/paumarro/apollo-be/internal/repositories"
+	"github.com/paumarro/apollo-be/internal/services"
 	env "github.com/paumarro/apollo-be/pkg"
 	"github.com/stretchr/testify/assert"
 )
@@ -81,9 +83,9 @@ func TestArtworkIntegration(t *testing.T) {
 
 		ctx.Set("sanitizedArtwork", artwork)
 
-		ac := &controllers.ArtworkController{
-			DB: initializers.DB, // Pass the database connection
-		}
+		repo := repositories.NewGormArtworkRepository(initializers.DB)
+		service := services.NewArtworkService(repo)
+		ac := controllers.NewArtworkController(service)
 		ac.Create(ctx)
 
 		assert.Equal(t, http.StatusCreated, w.Code)

@@ -16,9 +16,11 @@ import (
 func init() {
 	env.LoadEnvVariables(".env")
 	initializers.ConnectToDB()
+	log.Println("Starting database migration...")
 	if err := initializers.DB.AutoMigrate(&models.Artwork{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
+	log.Println("Database migration completed successfully.")
 }
 
 func main() {
@@ -39,8 +41,8 @@ func main() {
 
 	galleryGroup := router.Group("/gallery")
 	// galleryGroup.Use(middleware.Auth("Gallery", clientID))
-	galleryGroup.Use(middleware.Sanitize())
-	galleryGroup.Use(middleware.Validate())
+	// galleryGroup.Use(middleware.Sanitize())
+	// galleryGroup.Use(middleware.Validate())
 
 	galleryGroup.POST("/artworks", artworkController.Create)
 	galleryGroup.PUT("/artworks/:id", artworkController.Update)
@@ -48,8 +50,8 @@ func main() {
 
 	regularGroup := router.Group("/")
 	// regularGroup.Use(middleware.Auth("Regular", clientID))
-	regularGroup.Use(middleware.Sanitize())
-	regularGroup.Use(middleware.Validate())
+	// regularGroup.Use(middleware.Sanitize())
+	// regularGroup.Use(middleware.Validate())
 
 	regularGroup.GET("/artworks", artworkController.Index)
 	regularGroup.GET("/artworks/:id", artworkController.Find)
