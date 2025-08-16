@@ -10,9 +10,11 @@ services:
     env_file:
       - .env.docker
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - apollo-net
+
 
   db:
     image: postgres:latest
@@ -26,6 +28,11 @@ services:
       - db-data:/var/lib/postgresql/data
     networks:
       - apollo-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
