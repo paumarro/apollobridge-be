@@ -9,10 +9,9 @@ on:
       - main
 
 jobs:
-  test:
-    name: Run Tests
+  unit-tests:
+    name: Run Unit Tests
     runs-on: ubuntu-latest
-
     steps:
       # Step 1: Checkout the code
       - name: Checkout Code
@@ -28,9 +27,48 @@ jobs:
       - name: Install Dependencies
         run: go mod tidy
 
-      # Step 4: Run tests
-      - name: Run Tests
-        run: go test ./... -v
+      # Step 4: Run unit tests
+      - name: Run Unit Tests
+        run: go test ./... -v -short
+
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Docker Compose
+      - name: Set up Docker Compose
+        uses: docker/setup-buildx-action@v2
+
+      # Step 3: Start services with Docker Compose
+      - name: Start Services
+        run: docker-compose up -d db
+
+      # Step 4: Wait for Postgres to be ready
+      - name: Wait for Database
+        run: |
+          for i in {1..10}; do
+            if docker exec $(docker ps -qf "name=db") pg_isready -U $POSTGRES_USER; then
+              echo "Database is ready";
+              break;
+            fi;
+            echo "Waiting for database...";
+            sleep 5;
+          done
+
+      # Step 5: Run integration tests
+      - name: Run Integration Tests
+        run: |
+          docker-compose run --rm test-database
+          docker-compose run --rm test-middleware
+
+      # Step 6: Tear down services
+      - name: Stop Services
+        run: docker-compose down
+
 
   security:
     name: Run Security Scans
