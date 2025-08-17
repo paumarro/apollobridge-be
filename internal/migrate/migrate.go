@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	env.LoadEnvVariables("../../.env")
+	env.LoadEnvVariables(".../.../.env")
 	initializers.ConnectToDB()
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/paumarro/apollo-be/internal/dto"
@@ -48,7 +49,13 @@ func (ac *ArtworkController) Create(c *gin.Context) {
 	}
 
 	if err := ac.ArtworkService.CreateArtwork(&artwork); err != nil {
-		respondWithError(c, http.StatusInternalServerError, "Failed to create artwork", err)
+		if strings.Contains(err.Error(), "already exists") {
+			// Map duplicate error to 409 Conflict
+			respondWithError(c, http.StatusConflict, "Artwork already exists", err.Error())
+		} else {
+			// Handle other errors as 500 Internal Server Error
+			respondWithError(c, http.StatusInternalServerError, "Failed to create artwork", err.Error())
+		}
 		return
 	}
 
@@ -67,6 +74,10 @@ func (ac *ArtworkController) Index(c *gin.Context) {
 
 func (ac *ArtworkController) Find(c *gin.Context) {
 	id := c.Param("id")
+	if id == "" {
+		respondWithError(c, http.StatusBadRequest, "Invalid or missing ID parameter", nil)
+		return
+	}
 
 	artwork, err := ac.ArtworkService.GetArtworkByID(id)
 	if err != nil {
