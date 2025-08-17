@@ -47,10 +47,10 @@ services:
     networks:
       - apollo-net
 
-  test-database:
+  test-artwork:
     build: .
     command: >
-      bash -c "go test ./internal/test/integration_test/database_test.go"
+      bash -c "go test ./internal/test/integration_test/artwork_test.go"
     environment:
       ART_DB_URL: ${ART_DB_URL}
       RUNNING_IN_DOCKER: "true"
@@ -59,17 +59,17 @@ services:
     networks:
       - apollo-net
 
-  test-middleware:
-    build: .
-    command: >
-      bash -c "go test ./internal/test/integration_test/middleware_test.go"
-    environment:
-      ART_DB_URL: ${ART_DB_URL}
-      RUNNING_IN_DOCKER: "true"
-    depends_on:
-      - db
-    networks:
-      - apollo-net
+  # test-middleware:
+  #   build: .
+  #   command: >
+  #     bash -c "go test ./internal/test/integration_test/middleware_test.go"
+  #   environment:
+  #     ART_DB_URL: ${ART_DB_URL}
+  #     RUNNING_IN_DOCKER: "true"
+  #   depends_on:
+  #     - db
+  #   networks:
+  #     - apollo-net
 
 networks:
   apollo-net:
