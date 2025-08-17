@@ -6,6 +6,8 @@ import (
 	"log"
 	"testing"
 
+	"gorm.io/gorm"
+
 	"github.com/paumarro/apollo-be/internal/models"
 	"github.com/paumarro/apollo-be/internal/repositories"
 	"github.com/paumarro/apollo-be/internal/services"
@@ -81,7 +83,7 @@ func TestGetArtworkByID(t *testing.T) {
 		// Arrange
 		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
-		mockRepo.On("FindByID", "invalid-id").Return(nil, services.ErrNotFound)
+		mockRepo.On("FindByID", "invalid-id").Return(nil, gorm.ErrRecordNotFound)
 
 		// Act
 		artwork, err := service.GetArtworkByID("invalid-id")
@@ -118,7 +120,9 @@ func TestCreateArtwork(t *testing.T) {
 		// Arrange
 		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
-		invalidArtwork := &models.Artwork{Title: ""} // Title is required
+		invalidArtwork := &models.Artwork{Title: "", Artist: "Someone"} // Title is required (validated by repo/db)
+
+		mockRepo.On("FindAll").Return([]models.Artwork{}, nil)
 		mockRepo.On("Create", invalidArtwork).Return(errors.New("validation error"))
 
 		// Act
@@ -127,9 +131,32 @@ func TestCreateArtwork(t *testing.T) {
 		// Assert
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "validation error")
+		mockRepo.AssertCalled(t, "FindAll")
 		mockRepo.AssertCalled(t, "Create", invalidArtwork)
 		assert.Contains(t, logBuffer.String(), "Creating artwork:")
 		assert.Contains(t, logBuffer.String(), "Error in CreateArtwork: validation error")
+	})
+
+	t.Run("DuplicateArtwork", func(t *testing.T) {
+		// Arrange
+		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
+
+		dup := &models.Artwork{Title: "Same", Artist: "Artist"}
+		// Service checks duplicates using FindAll (title + artist)
+		mockRepo.On("FindAll").Return([]models.Artwork{
+			{ID: 10, Title: "Same", Artist: "Artist"},
+		}, nil)
+		// Create should NOT be called
+
+		// Act
+		err := service.CreateArtwork(dup)
+
+		// Assert
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, services.ErrDuplicate))
+		mockRepo.AssertCalled(t, "FindAll")
+		mockRepo.AssertNotCalled(t, "Create")
+		assert.Contains(t, logBuffer.String(), "Creating artwork:")
 	})
 
 	t.Run("Success", func(t *testing.T) {
@@ -137,6 +164,8 @@ func TestCreateArtwork(t *testing.T) {
 		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
 		validArtwork := &models.Artwork{Title: "Valid Title", Artist: "Valid Artist"}
+		// No duplicates
+		mockRepo.On("FindAll").Return([]models.Artwork{}, nil)
 		mockRepo.On("Create", validArtwork).Return(nil)
 
 		// Act
@@ -144,6 +173,7 @@ func TestCreateArtwork(t *testing.T) {
 
 		// Assert
 		assert.NoError(t, err)
+		mockRepo.AssertCalled(t, "FindAll")
 		mockRepo.AssertCalled(t, "Create", validArtwork)
 		assert.Contains(t, logBuffer.String(), "Creating artwork:")
 	})
@@ -169,7 +199,7 @@ func TestDeleteArtwork(t *testing.T) {
 		// Arrange
 		mockRepo, service, logBuffer := setUpMockServiceWithLogger()
 
-		mockRepo.On("Delete", "invalid-id").Return(services.ErrNotFound)
+		mockRepo.On("Delete", "invalid-id").Return(gorm.ErrRecordNotFound)
 
 		// Act
 		err := service.DeleteArtwork("invalid-id")

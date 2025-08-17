@@ -2,10 +2,11 @@ package unit_test
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
 	"github.com/paumarro/apollo-be/internal/controllers"
@@ -16,6 +17,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func init() {
+	gin.SetMode(gin.ReleaseMode)
+}
 
 // SetupMockController initializes a mock repository and returns an ArtworkController instance.
 func setupMockController() (*repositories.MockArtworkRepository, *controllers.ArtworkController) {
@@ -29,7 +34,9 @@ func TestArtworkCreate(t *testing.T) {
 	t.Run("Successful Creation", func(t *testing.T) {
 		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		// Configure the mock to return no error
+		// Service checks duplicates via FindAll first
+		mockRepo.On("FindAll").Return([]models.Artwork{}, nil)
+		// Then persist
 		mockRepo.On("Create", mock.AnythingOfType("*models.Artwork")).Return(nil)
 
 		w := httptest.NewRecorder()
@@ -50,17 +57,47 @@ func TestArtworkCreate(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, w.Code)
 		assert.Contains(t, w.Body.String(), "Test Artwork")
 
-		// Verify the mock was called
+		// Verify the expected repo calls
+		mockRepo.AssertCalled(t, "FindAll")
 		mockRepo.AssertCalled(t, "Create", mock.AnythingOfType("*models.Artwork"))
+	})
+
+	t.Run("Duplicate Conflict", func(t *testing.T) {
+		mockRepo, ac := setupMockController()
+
+		// Service checks duplicates using FindAll (title + artist)
+		mockRepo.On("FindAll").Return([]models.Artwork{
+			{ID: 10, Title: "Test Artwork", Artist: "Test Artist"},
+		}, nil)
+		// Create should NOT be called
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		c.Set("sanitizedArtwork", dto.ArtworkRequest{
+			Title:       "Test Artwork",
+			Artist:      "Test Artist",
+			Description: "Test Description",
+			Image:       "http://test.com/image.jpg",
+		})
+
+		ac.Create(c)
+
+		// Controller maps duplicate to 409 Conflict
+		assert.Equal(t, http.StatusConflict, w.Code)
+		assert.Contains(t, w.Body.String(), "Artwork already exists")
+
+		mockRepo.AssertCalled(t, "FindAll")
+		mockRepo.AssertNotCalled(t, "Create", mock.Anything)
 	})
 
 	t.Run("Database Error", func(t *testing.T) {
 		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		// Configure the mock to return a database error
-		mockRepo.On("Create", mock.AnythingOfType("*models.Artwork")).Run(func(args mock.Arguments) {
-			fmt.Println("Mock Create called with:", args)
-		}).Return(errors.New("DB error"))
+		// No duplicates
+		mockRepo.On("FindAll").Return([]models.Artwork{}, nil)
+		// Configure the mock to return a database error on Create
+		mockRepo.On("Create", mock.AnythingOfType("*models.Artwork")).Return(errors.New("DB error"))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -81,6 +118,7 @@ func TestArtworkCreate(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "Failed to create artwork")
 
 		// Verify the mock was called
+		mockRepo.AssertCalled(t, "FindAll")
 		mockRepo.AssertCalled(t, "Create", mock.AnythingOfType("*models.Artwork"))
 	})
 
@@ -178,7 +216,8 @@ func TestArtworkFind(t *testing.T) {
 	t.Run("Artwork Not Found", func(t *testing.T) {
 		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		mockRepo.On("FindByID", "1").Return(nil, services.ErrNotFound)
+		// Service maps gorm.ErrRecordNotFound to services.ErrNotFound
+		mockRepo.On("FindByID", "1").Return(nil, gorm.ErrRecordNotFound)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -240,7 +279,7 @@ func TestArtworkUpdate(t *testing.T) {
 		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
 		// Mock the repository to return not found
-		mockRepo.On("FindByID", "1").Return(nil, services.ErrNotFound)
+		mockRepo.On("FindByID", "1").Return(nil, gorm.ErrRecordNotFound)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -351,7 +390,8 @@ func TestArtworkDelete(t *testing.T) {
 	t.Run("Artwork Not Found", func(t *testing.T) {
 		mockRepo, ac := setupMockController() // Fresh mockRepo for this subtest
 
-		mockRepo.On("Delete", "1").Return(services.ErrNotFound)
+		// Service maps gorm.ErrRecordNotFound to services.ErrNotFound
+		mockRepo.On("Delete", "1").Return(gorm.ErrRecordNotFound)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
