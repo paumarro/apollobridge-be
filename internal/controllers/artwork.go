@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +12,20 @@ import (
 	"github.com/paumarro/apollo-be/internal/models"
 	"github.com/paumarro/apollo-be/internal/services"
 )
+
+func parseIDParam(c *gin.Context) (uint64, bool) {
+	idStr := c.Param("id")
+	if idStr == "" {
+		respondWithError(c, http.StatusBadRequest, "Invalid or missing ID parameter", nil)
+		return 0, false
+	}
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil || id == 0 {
+		respondWithError(c, http.StatusBadRequest, "Invalid ID format, must be a positive integer", nil)
+		return 0, false
+	}
+	return id, true
+}
 
 // ArtworkController handles artwork-related operations
 type ArtworkController struct {
@@ -72,13 +87,35 @@ func (ac *ArtworkController) Index(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"artworks": artworks})
 }
 
+// Find
 func (ac *ArtworkController) Find(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		respondWithError(c, http.StatusBadRequest, "Invalid or missing ID parameter", nil)
+	_, ok := parseIDParam(c)
+	if !ok {
 		return
 	}
 
+	id := c.Param("id") // still pass the string if your service expects string today
+	artwork, err := ac.ArtworkService.GetArtworkByID(id)
+	if err != nil {
+		if errors.Is(err, services.ErrNotFound) {
+			respondWithError(c, http.StatusNotFound, "Artwork not found", nil)
+		} else {
+			respondWithError(c, http.StatusInternalServerError, "Failed to find artwork", err)
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"artwork": artwork})
+}
+
+// ArtworkUpdate handles updating an artwork
+// Update
+func (ac *ArtworkController) Update(c *gin.Context) {
+	_, ok := parseIDParam(c)
+	if !ok {
+		return
+	}
+
+	id := c.Param("id")
 	artwork, err := ac.ArtworkService.GetArtworkByID(id)
 	if err != nil {
 		if errors.Is(err, services.ErrNotFound) {
@@ -89,52 +126,37 @@ func (ac *ArtworkController) Find(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"artwork": artwork})
-}
-
-// ArtworkUpdate handles updating an artwork
-func (ac *ArtworkController) Update(c *gin.Context) {
-	id := c.Param("id")
-
-	// Fetch the artwork by ID
-	artwork, err := ac.ArtworkService.GetArtworkByID(id)
-	if err != nil {
-		if errors.Is(err, services.ErrNotFound) {
-			respondWithError(c, http.StatusNotFound, "Artwork not found", nil)
-		} else {
-			log.Printf("Error finding artwork: %v", err)
-			respondWithError(c, http.StatusInternalServerError, "Failed to find artwork", nil)
-		}
-		return
-	}
-
-	// Retrieve sanitized input
 	sanitizedArtwork, exists := c.Get("sanitizedArtwork")
 	if !exists {
 		respondWithError(c, http.StatusInternalServerError, "Failed to retrieve sanitized input", nil)
 		return
 	}
+	req, ok := sanitizedArtwork.(dto.ArtworkRequest)
+	if !ok {
+		respondWithError(c, http.StatusInternalServerError, "Invalid sanitized input", nil)
+		return
+	}
 
-	// Update the artwork fields
-	req := sanitizedArtwork.(dto.ArtworkRequest)
 	artwork.Title = req.Title
 	artwork.Artist = req.Artist
 	artwork.Description = req.Description
 	artwork.Image = req.Image
 
-	// Attempt to update the artwork
 	if err := ac.ArtworkService.UpdateArtwork(artwork); err != nil {
-		log.Printf("Error updating artwork: %v", err)
-		respondWithError(c, http.StatusInternalServerError, "Failed to update artwork", nil)
+		respondWithError(c, http.StatusInternalServerError, "Failed to update artwork", err)
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"artwork": artwork})
 }
 
+// Delete
 func (ac *ArtworkController) Delete(c *gin.Context) {
-	id := c.Param("id")
+	_, ok := parseIDParam(c)
+	if !ok {
+		return
+	}
 
+	id := c.Param("id")
 	if err := ac.ArtworkService.DeleteArtwork(id); err != nil {
 		if errors.Is(err, services.ErrNotFound) {
 			respondWithError(c, http.StatusNotFound, "Artwork not found", nil)
@@ -143,6 +165,5 @@ func (ac *ArtworkController) Delete(c *gin.Context) {
 		}
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Artwork successfully deleted"})
 }
