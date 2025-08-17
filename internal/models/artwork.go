@@ -1,3 +1,4 @@
+// internal/models/artwork.go
 package models
 
 import (
@@ -7,11 +8,12 @@ import (
 )
 
 type Artwork struct {
-	gorm.Model
-	ID          uint       `json:"id"`
-	Title       string     `json:"title"`
-	Artist      string     `json:"artist"`
-	Date        *time.Time `json:"date,omitempty"`
-	Description string     `json:"description"`
-	Image       string     `json:"image"`
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	Title       string         `json:"title"`
+	Artist      string         `json:"artist"`
+	Description string         `json:"description"`
+	Image       string         `json:"image"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }

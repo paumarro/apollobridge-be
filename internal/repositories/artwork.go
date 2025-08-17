@@ -35,8 +35,10 @@ func (r *GormArtworkRepository) FindAll() ([]models.Artwork, error) {
 
 func (r *GormArtworkRepository) FindByID(id string) (*models.Artwork, error) {
 	var artwork models.Artwork
-	err := r.DB.First(&artwork, id).Error
-	return &artwork, err
+	if err := r.DB.First(&artwork, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &artwork, nil
 }
 
 func (r *GormArtworkRepository) Update(artwork *models.Artwork) error {
@@ -44,5 +46,12 @@ func (r *GormArtworkRepository) Update(artwork *models.Artwork) error {
 }
 
 func (r *GormArtworkRepository) Delete(id string) error {
-	return r.DB.Delete(&models.Artwork{}, id).Error
+	res := r.DB.Delete(&models.Artwork{}, "id = ?", id)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
