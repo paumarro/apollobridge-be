@@ -1,78 +1,102 @@
 package middleware
 
 import (
-	"html"
-	"regexp"
+	"bytes"
+	"encoding/json"
+	"io"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/paumarro/apollo-be/internal/dto"
+	"golang.org/x/text/unicode/norm"
 )
 
-// Sanitize middleware sanitizes headers, query parameters, path parameters, and body data
+// Sanitize strictly parses and normalizes ArtworkRequest bodies for POST/PUT.
+// - Enforces Content-Type: application/json
+// - Limits body size (1 MB)
+// - Rejects unknown JSON fields (DisallowUnknownFields)
+// - Normalizes strings (TrimSpace + Unicode NFC) without HTML escaping or tag stripping
+// - Stores the normalized request in context as "sanitizedArtwork"
 func Sanitize() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Sanitize headers
-		for key, values := range c.Request.Header {
-			for i, value := range values {
-				c.Request.Header[key][i] = sanitizeString(value)
-			}
+		// Only handle JSON bodies for POST/PUT. Do not mutate headers/query/path.
+		if c.Request.Method != http.MethodPost && c.Request.Method != http.MethodPut {
+			c.Next()
+			return
 		}
 
-		// Sanitize query parameters
-		query := c.Request.URL.Query()
-		for key, values := range query {
-			for i, value := range values {
-				query[key][i] = sanitizeString(value)
-			}
-		}
-		c.Request.URL.RawQuery = query.Encode()
-
-		// Sanitize path parameters
-		for i, param := range c.Params {
-			c.Params[i].Value = sanitizeString(param.Value)
+		// Enforce Content-Type
+		ct := c.GetHeader("Content-Type")
+		if ct == "" || !strings.HasPrefix(strings.ToLower(ct), "application/json") {
+			errorResponse(c, http.StatusUnsupportedMediaType, "unsupported_media_type", "Content-Type must be application/json", nil)
+			return
 		}
 
-		// Sanitize body (if applicable)
-		if c.Request.Method == "POST" || c.Request.Method == "PUT" {
-			var req dto.ArtworkRequest
-			if err := c.ShouldBindJSON(&req); err != nil {
-				c.JSON(400, gin.H{"error": "Invalid JSON payload", "details": err.Error()})
-				c.Abort()
-				return
-			}
+		// Limit body size to 1MB (adjust as needed)
+		const maxBodyBytes = 1 << 20 // 1MB
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBodyBytes)
 
-			// Sanitize body fields
-			req.Title = sanitizeString(req.Title)
-			req.Artist = sanitizeString(req.Artist)
-			req.Description = sanitizeString(req.Description)
-			req.Image = sanitizeString(req.Image)
-
-			// Save sanitized body to the context
-			c.Set("sanitizedArtwork", req)
+		// Strict decode with DisallowUnknownFields
+		var req dto.ArtworkRequest
+		dec := json.NewDecoder(c.Request.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&req); err != nil {
+			// Map common errors
+			msg, code, details, status := mapJSONDecodeError(err)
+			errorResponse(c, status, code, msg, details)
+			return
 		}
 
-		// Pass control to the next middleware/handler
+		// Normalize fields (no HTML escaping or tag stripping)
+		req.Title = normalizeString(req.Title)
+		req.Artist = normalizeString(req.Artist)
+		req.Description = normalizeString(req.Description)
+		req.Image = normalizeString(req.Image)
+
+		// Re-encode normalized JSON back into the request body for any downstream binders (optional)
+		buf, _ := json.Marshal(req)
+		c.Request.Body = io.NopCloser(bytes.NewReader(buf))
+
+		// Store normalized request in context for controllers/validators
+		c.Set("sanitizedArtwork", req)
+
 		c.Next()
 	}
 }
 
-// sanitizeString trims whitespace, escapes HTML, and removes HTML tags
-func sanitizeString(input string) string {
-	// Trim whitespace
-	trimmed := strings.TrimSpace(input)
-
-	// Strip HTML tags
-	stripped := stripHTMLTags(trimmed)
-
-	// Escape HTML entities (e.g., < becomes &lt;, > becomes &gt;)
-	escaped := html.EscapeString(stripped)
-	return escaped
+func normalizeString(s string) string {
+	// Unicode NFC normalization plus trim. Avoid HTML escaping here; do output encoding at render time.
+	s = norm.NFC.String(s)
+	s = strings.TrimSpace(s)
+	return s
 }
 
-// stripHTMLTags removes HTML tags using a regular expression
-func stripHTMLTags(input string) string {
-	// Regex to match HTML tags
-	re := regexp.MustCompile(`<.*?>`)
-	return re.ReplaceAllString(input, "")
+func mapJSONDecodeError(err error) (message, code string, details map[string]string, status int) {
+	e := err.Error()
+	// Payload too large comes from MaxBytesReader
+	if strings.Contains(e, "http: request body too large") {
+		return "Payload too large", "payload_too_large", nil, http.StatusRequestEntityTooLarge
+	}
+	// Unknown field: json: unknown field "..."
+	if strings.Contains(e, "unknown field") {
+		field := extractUnknownFieldName(e)
+		details = map[string]string{}
+		if field != "" {
+			details["unknown_fields"] = field
+		}
+		return "Unknown field in JSON payload", "unknown_field", details, http.StatusBadRequest
+	}
+	// Generic invalid JSON
+	return "Invalid JSON payload", "invalid_json", nil, http.StatusBadRequest
+}
+
+func extractUnknownFieldName(errStr string) string {
+	// Typical form: "json: unknown field \"date\""
+	start := strings.Index(errStr, "\"")
+	end := strings.LastIndex(errStr, "\"")
+	if start >= 0 && end > start {
+		return errStr[start+1 : end]
+	}
+	return ""
 }
