@@ -22,7 +22,6 @@ func LoadEnvVariables(envFile string) {
 		return
 	}
 
-	// Load .env file
 	err := godotenv.Load(envFile)
 	if err != nil {
 		log.Fatalf("Error loading %s file: %v", envFile, err)
