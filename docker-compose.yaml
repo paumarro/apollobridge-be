@@ -47,22 +47,22 @@ services:
     networks:
       - apollo-net
 
-test-integration:
-  build: .
-  command: >
-    bash -c "
-      echo 'Running all integration tests...' &&
-      go test -v ./internal/test/integration_test/... &&
-      echo 'All integration tests completed successfully!'
-    "
-  environment:
-    ART_DB_URL: ${ART_DB_URL}
-    RUNNING_IN_DOCKER: "true"
-  depends_on:
-    db:
-      condition: service_healthy
-  networks:
-    - apollo-net
+  test-integration:
+    build: .
+    command: >
+      bash -c "
+        echo 'Running all integration tests...' &&
+        go test -v ./internal/test/integration_test/... &&
+        echo 'All integration tests completed successfully!'
+      "
+    environment:
+      ART_DB_URL: ${ART_DB_URL}
+      RUNNING_IN_DOCKER: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - apollo-net
 
 networks:
   apollo-net:
