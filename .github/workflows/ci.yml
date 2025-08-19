@@ -61,7 +61,7 @@ jobs:
       # Build and run integration tests with docker-compose
       - name: Build and run integration tests
         run: |
-          docker compose up --build --exit-code-from test-artwork --abort-on-container-exit
+          docker compose up --build --exit-code-from test-integration --abort-on-container-exit
 
       # Show logs on failure for debugging
       - name: Show logs on failure
@@ -70,7 +70,7 @@ jobs:
           echo "=== Database logs ==="
           docker compose logs db
           echo "=== Test container logs ==="
-          docker compose logs test-artwork
+          docker compose logs test-integration
 
       # Always cleanup containers and volumes
       - name: Cleanup
